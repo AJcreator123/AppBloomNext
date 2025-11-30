@@ -32,6 +32,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "infoPlist": {
+      "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
+      "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot."
     }
   }
 }
