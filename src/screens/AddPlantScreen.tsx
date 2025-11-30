@@ -23,7 +23,12 @@ import {
   SERVICE_UUID,
 } from "../ble/client";
 
-import { PWD_UUID, RES_UUID } from "../ble/uuids";
+import {
+  SSID_CHAR_UUID,
+  PASS_CHAR_UUID,
+  CONNECT_CHAR_UUID,
+  STATUS_CHAR_UUID
+} from "../ble/uuids";
 
 type NearbyPot = {
   id: string;
@@ -42,7 +47,8 @@ export default function AddPlantScreen({ navigation }: any) {
   const [isScanning, setIsScanning] = useState(false);
   const [nearbyPots, setNearbyPots] = useState<NearbyPot[]>([]);
   const [selectedPot, setSelectedPot] = useState<NearbyPot | null>(null);
-  const [potPassword, setPotPassword] = useState("");
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPassword, setWifiPassword] = useState("");
 
   // -----------------------
   // SCANNING
@@ -106,7 +112,7 @@ export default function AddPlantScreen({ navigation }: any) {
   };
 
   // -----------------------
-  // FINAL SAVE + BLE AUTH
+  // FINAL SAVE + WIFI PROVISIONING
   // -----------------------
   const onSave = async () => {
     if (!name.trim() || !species.trim()) {
@@ -119,39 +125,54 @@ export default function AddPlantScreen({ navigation }: any) {
       return;
     }
 
-    if (!potPassword.trim()) {
-      Alert.alert("Password Needed", "Enter the pot password to continue.");
+    if (!wifiSsid.trim()) {
+      Alert.alert("WiFi Needed", "Enter your WiFi network name.");
       return;
     }
 
     const deviceId = selectedPot.id;
 
     try {
+      console.log("🔗 Connecting to ESP32...");
       await connectToDevice(deviceId);
 
-// 1) Enable notify BEFORE writing
-console.log("👂 Subscribing to notifications...");
-const unsub = await listenForResponse(
-  deviceId,
-  SERVICE_UUID,
-  RES_UUID,
-  (msg) => {
-    console.log("BLE RESPONSE:", msg);
+      // 1) Send WiFi SSID
+      console.log("📡 Sending WiFi SSID:", wifiSsid);
+      await writePassword(deviceId, SERVICE_UUID, SSID_CHAR_UUID, wifiSsid);
 
-    if (msg === "OK") {
-      unsub.remove();
-      savePlant();
-    }
-    if (msg === "FAIL") {
-      unsub.remove();
-      Alert.alert("Wrong password");
-    }
-  }
-);
+      // 2) Send WiFi password
+      console.log("🔐 Sending WiFi password...");
+      await writePassword(deviceId, SERVICE_UUID, PASS_CHAR_UUID, wifiPassword);
 
-// 2) THEN send password
-console.log("🔐 Sending password...");
-await writePassword(deviceId, SERVICE_UUID, PWD_UUID, potPassword);
+      // 3) Listen for status updates
+      console.log("👂 Listening for connection status...");
+      const unsub = await listenForResponse(
+        deviceId,
+        SERVICE_UUID,
+        STATUS_CHAR_UUID,
+        (status) => {
+          console.log("📶 ESP32 Status:", status);
+
+          if (status === "CONNECTED") {
+            unsub.remove();
+            Alert.alert("Success!", "ESP32 connected to WiFi and will start sending sensor data.");
+            savePlant();
+          } else if (status === "FAIL") {
+            unsub.remove();
+            Alert.alert("Connection Failed", "ESP32 couldn't connect to WiFi. Check credentials.");
+          }
+        }
+      );
+
+      // 4) Trigger WiFi connection
+      console.log("🚀 Triggering WiFi connection...");
+      await writePassword(deviceId, SERVICE_UUID, CONNECT_CHAR_UUID, "CONNECT");
+
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        unsub.remove();
+        Alert.alert("Timeout", "ESP32 didn't respond. Check if it's in provisioning mode.");
+      }, 30000);
 
     } catch (err) {
       console.log("BLE ERROR:", err);
@@ -228,15 +249,30 @@ await writePassword(deviceId, SERVICE_UUID, PWD_UUID, potPassword);
 
         {selectedPot && (
           <>
-            <Text style={s.label}>Enter pot password</Text>
+            <Text style={s.label}>WiFi Network Name (SSID)</Text>
             <TextInput
               style={s.input}
-              placeholder="Password"
+              placeholder="Your WiFi name"
+              placeholderTextColor={colors.textMuted}
+              value={wifiSsid}
+              onChangeText={setWifiSsid}
+              autoCapitalize="none"
+            />
+
+            <Text style={s.label}>WiFi Password</Text>
+            <TextInput
+              style={s.input}
+              placeholder="WiFi password"
               placeholderTextColor={colors.textMuted}
               secureTextEntry
-              value={potPassword}
-              onChangeText={setPotPassword}
+              value={wifiPassword}
+              onChangeText={setWifiPassword}
+              autoCapitalize="none"
             />
+
+            <Text style={s.hint}>
+              The ESP32 will connect to this WiFi network and start sending sensor data to the cloud.
+            </Text>
           </>
         )}
       </View>
@@ -271,10 +307,10 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.panel,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontFamily: fonts.sans,
@@ -286,8 +322,8 @@ const s = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.card,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
   },
   sectionTitle: {
     fontFamily: fonts.sansSemi,
@@ -310,7 +346,7 @@ const s = StyleSheet.create({
   potRow: {
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.border,
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -333,6 +369,13 @@ const s = StyleSheet.create({
     fontFamily: fonts.sansSemi,
     color: colors.text,
     marginTop: 10,
+  },
+  hint: {
+    fontFamily: fonts.sans,
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 16,
   },
   button: {
     marginTop: 16,

@@ -6,23 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { plants as initialPlants } from "../data/plants";
-
-export type PlantVitals = {
-  temp: number;
-  moisture: number;
-  light: number;
-  humidity?: number;
-};
-
-export type Plant = {
-  id: string;              // local app id (string)
-  name: string;
-  species: string;
-  image: string;
-  vitals?: PlantVitals;
-  supabasePlantId: number; // MUST match PLANT_ID on ESP32
-  potMacAddress?: string;  // future: real BLE MAC
-};
+import type { Plant } from "../types/Plant";
 
 type PlantsContextType = {
   plants: Plant[];
@@ -33,9 +17,9 @@ type PlantsContextType = {
 const PlantsContext = createContext<PlantsContextType | undefined>(undefined);
 
 export function PlantsProvider({ children }: { children: ReactNode }) {
-  // (Cast initialPlants and inject supabasePlantId defaults)
+  // Cast initialPlants and inject supabasePlantId defaults
   const [plants, setPlants] = useState<Plant[]>(
-    (initialPlants as any[]).map((p, idx) => ({
+    initialPlants.map((p, idx) => ({
       id: p.id ?? String(idx + 1),
       name: p.name,
       species: p.species,

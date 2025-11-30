@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.AppBloom"
+      "bundleIdentifier": "com.anonymous.AppBloom",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
+        "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -33,9 +37,24 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "infoPlist": {
-      "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
-      "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot."
-    }
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "peripheral",
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Bloom needs Bluetooth to connect to your plant pot."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c8e5f407-0742-44a9-bf6c-4b07bcbe8a89"
+      }
+    },
+    "owner": "brubru6707"
   }
 }

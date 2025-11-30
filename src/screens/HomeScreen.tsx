@@ -10,23 +10,29 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import StatusCard from "../components/StatusCard";
-import { useLiveReadings } from "../hooks/useLiveReadings";
+import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
 import { useReadingsStore } from "../store/readingsStore";
 import { fetchLatestReading } from "../api/pots";
 
 const HomeScreen: React.FC = () => {
-  // start polling Supabase every few seconds
-  useLiveReadings(5000);
+  // Real-time updates from Supabase (no polling!)
+  useRealtimeReadings();
 
   const reading = useReadingsStore((s) => s.reading);
+  const error = useReadingsStore((s) => s.error);
   const setReading = useReadingsStore((s) => s.setReading);
 
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    const latest = await fetchLatestReading();
-    if (latest) setReading(latest);
+    try {
+      const latest = await fetchLatestReading();
+      if (latest) setReading(latest);
+    } catch (err) {
+      console.error("Refresh error:", err);
+      // Error will be shown via the store
+    }
     setRefreshing(false);
   }, [setReading]);
 
@@ -85,6 +91,13 @@ const HomeScreen: React.FC = () => {
           </Text>
         </View>
       </View>
+
+      {error && (
+        <View style={styles.errorCard}>
+          <Ionicons name="warning" size={20} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -258,6 +271,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#020617",
     marginBottom: 12,
+  },
+  errorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#DC2626",
+    marginLeft: 8,
+    flex: 1,
   },
 });
 
