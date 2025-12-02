@@ -1,5 +1,4 @@
 // src/ble/BLE.ts
-
 import { BleManager, Device, Characteristic } from "react-native-ble-plx";
 import { PermissionsAndroid, Platform, Alert } from "react-native";
 import { Buffer } from "buffer";
@@ -49,38 +48,6 @@ async function requestPermissions(): Promise<boolean> {
     }
   }
   return true; // iOS permissions handled via Info.plist
-}
-
-// ---- SCAN FOR BLOOM POTS ----
-export async function scanForBloomPots(
-  onDeviceFound: (device: Device) => void,
-  onError?: (error: Error) => void
-): Promise<void> {
-  try {
-    const hasPermissions = await requestPermissions();
-    if (!hasPermissions) {
-      throw new Error("Bluetooth permissions not granted");
-    }
-
-    manager.startDeviceScan(null, null, (error, device) => {
-      if (error) {
-        console.error("Scan error:", error);
-        onError?.(error);
-        return;
-      }
-
-      if (!device?.name) return;
-
-      if (device.name.startsWith("BloomPot-")) {
-        onDeviceFound(device);
-      }
-    });
-  } catch (error) {
-    console.error("Failed to start scanning:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    Alert.alert("Scan Failed", errorMessage);
-    onError?.(error instanceof Error ? error : new Error(errorMessage));
-  }
 }
 
 // ---- CONNECT TO ESP32 ----

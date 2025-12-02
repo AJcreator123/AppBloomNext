@@ -15,6 +15,7 @@ import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
 import { usePlants } from "../context/PlantsContext";
 
+// BLE client functions
 import {
   scanForPots,
   connectToDevice,
@@ -37,6 +38,24 @@ type NearbyPot = {
   plant_id: number;
 };
 
+// ==============================
+//   NAME EXTRACTION FIX (IMPORTANT)
+// ==============================
+function extractPotName(device: any): string {
+  if (device.name) return device.name;
+  if (device.localName) return device.localName;
+
+  // Android sometimes hides names unless decoded from manufacturer data
+  try {
+    if (device.manufacturerData) {
+      const decoded = Buffer.from(device.manufacturerData, "base64").toString("utf8");
+      if (decoded.includes("BloomPot-")) return decoded;
+    }
+  } catch (_) {}
+
+  return "";
+}
+
 export default function AddPlantScreen({ navigation }: any) {
   const { addPlant } = usePlants();
 
@@ -50,21 +69,30 @@ export default function AddPlantScreen({ navigation }: any) {
   const [wifiSsid, setWifiSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
 
-  // -----------------------
-  // SCANNING
-  // -----------------------
+  // ==============================
+  //           SCANNING
+  // ==============================
   const startScan = async () => {
     setIsScanning(true);
     setNearbyPots([]);
 
     const stopScan = await scanForPots((device: any) => {
-      const name =
-        device.name ??
-        device.localName ??
-        "";
+      // Show full raw data for debugging too
+      console.log("📡 RAW DEVICE:", {
+        id: device.id,
+        name: device.name,
+        localName: device.localName,
+        manufacturerData: device.manufacturerData,
+        serviceUUIDs: device.serviceUUIDs,
+      });
 
-      if (!name.startsWith("BloomPot-")) return;
+      const potName = extractPotName(device);
+      console.log("🟦 Extracted Name:", potName);
 
+      // Only accept REAL BloomPot devices
+      if (!potName.startsWith("BloomPot-")) return;
+
+      // Add to list if not already
       setNearbyPots((prev) => {
         if (prev.find((x) => x.id === device.id)) return prev;
 
@@ -72,7 +100,7 @@ export default function AddPlantScreen({ navigation }: any) {
           ...prev,
           {
             id: device.id,
-            name,
+            name: potName,
             macAddress: device.id,
             plant_id: 1,
           },
@@ -80,15 +108,17 @@ export default function AddPlantScreen({ navigation }: any) {
       });
     });
 
+    // Auto stop scan
     setTimeout(() => {
       stopScan();
       setIsScanning(false);
-    }, 5000);
+      console.log("🛑 Scan stopped.");
+    }, 6000);
   };
 
-  // -----------------------
-  // SAVE LOCAL PLANT
-  // -----------------------
+  // ==============================
+  //       SAVE TO LOCAL DB
+  // ==============================
   const savePlant = () => {
     if (!selectedPot) return;
 
@@ -111,9 +141,9 @@ export default function AddPlantScreen({ navigation }: any) {
     navigation.goBack();
   };
 
-  // -----------------------
-  // FINAL SAVE + WIFI PROVISIONING
-  // -----------------------
+  // ==============================
+  //   FINAL SAVE + WIFI SETUP
+  // ==============================
   const onSave = async () => {
     if (!name.trim() || !species.trim()) {
       Alert.alert("Missing info", "Please enter a name and species.");
@@ -136,16 +166,16 @@ export default function AddPlantScreen({ navigation }: any) {
       console.log("🔗 Connecting to ESP32...");
       await connectToDevice(deviceId);
 
-      // 1) Send WiFi SSID
+      // 1. Send SSID
       console.log("📡 Sending WiFi SSID:", wifiSsid);
       await writePassword(deviceId, SERVICE_UUID, SSID_CHAR_UUID, wifiSsid);
 
-      // 2) Send WiFi password
+      // 2. Send Password
       console.log("🔐 Sending WiFi password...");
       await writePassword(deviceId, SERVICE_UUID, PASS_CHAR_UUID, wifiPassword);
 
-      // 3) Listen for status updates
-      console.log("👂 Listening for connection status...");
+      // 3. Listen for ESP32 result
+      console.log("👂 Listening...");
       const unsub = await listenForResponse(
         deviceId,
         SERVICE_UUID,
@@ -155,23 +185,23 @@ export default function AddPlantScreen({ navigation }: any) {
 
           if (status === "CONNECTED") {
             unsub.remove();
-            Alert.alert("Success!", "ESP32 connected to WiFi and will start sending sensor data.");
+            Alert.alert("Success!", "ESP32 connected to WiFi.");
             savePlant();
           } else if (status === "FAIL") {
             unsub.remove();
-            Alert.alert("Connection Failed", "ESP32 couldn't connect to WiFi. Check credentials.");
+            Alert.alert("Connection Failed", "Incorrect WiFi credentials.");
           }
         }
       );
 
-      // 4) Trigger WiFi connection
+      // 4. Trigger WiFi connect
       console.log("🚀 Triggering WiFi connection...");
       await writePassword(deviceId, SERVICE_UUID, CONNECT_CHAR_UUID, "CONNECT");
 
-      // Timeout after 30 seconds
+      // Safety timeout
       setTimeout(() => {
         unsub.remove();
-        Alert.alert("Timeout", "ESP32 didn't respond. Check if it's in provisioning mode.");
+        Alert.alert("Timeout", "No response from ESP32.");
       }, 30000);
 
     } catch (err) {
@@ -180,9 +210,9 @@ export default function AddPlantScreen({ navigation }: any) {
     }
   };
 
-  // -----------------------
-  // UI
-  // -----------------------
+  // ==============================
+  //               UI
+  // ==============================
   return (
     <View style={s.container}>
       <Text style={s.title}>Add a new plant</Text>
@@ -213,7 +243,7 @@ export default function AddPlantScreen({ navigation }: any) {
         onChangeText={setImageUrl}
       />
 
-      {/* BLUETOOTH */}
+      {/* BLE SECTION */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>Link with a Bloom Pot</Text>
 
@@ -271,13 +301,12 @@ export default function AddPlantScreen({ navigation }: any) {
             />
 
             <Text style={s.hint}>
-              The ESP32 will connect to this WiFi network and start sending sensor data to the cloud.
+              The ESP32 will connect to this WiFi and send sensor data to the cloud.
             </Text>
           </>
         )}
       </View>
 
-      {/* SAVE */}
       <TouchableOpacity style={s.button} onPress={onSave}>
         <Text style={s.buttonText}>Save Plant</Text>
       </TouchableOpacity>
@@ -285,9 +314,7 @@ export default function AddPlantScreen({ navigation }: any) {
   );
 }
 
-// -----------------------
-// STYLES
-// -----------------------
+// Styles
 const s = StyleSheet.create({
   container: {
     flex: 1,

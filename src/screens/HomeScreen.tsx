@@ -1,11 +1,12 @@
 // src/screens/HomeScreen.tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -14,15 +15,22 @@ import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
 import { useReadingsStore } from "../store/readingsStore";
 import { fetchLatestReading } from "../api/pots";
 
-const HomeScreen: React.FC = () => {
-  // Real-time updates from Supabase (no polling!)
-  useRealtimeReadings();
+import { usePlants } from "../context/PlantsContext";   // ← IMPORTANT!!!
 
+const HomeScreen: React.FC = ({ navigation }: any) => {
+  // Load plants from context
+  const { plants } = usePlants();
+
+  // If no plants → show empty screen
+  const activePlant = plants.length > 0 ? plants[0] : null;
+
+  // Real-time Supabase readings
+  useRealtimeReadings();
   const reading = useReadingsStore((s) => s.reading);
   const error = useReadingsStore((s) => s.error);
   const setReading = useReadingsStore((s) => s.setReading);
 
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -31,15 +39,29 @@ const HomeScreen: React.FC = () => {
       if (latest) setReading(latest);
     } catch (err) {
       console.error("Refresh error:", err);
-      // Error will be shown via the store
     }
     setRefreshing(false);
   }, [setReading]);
 
-  const temperature = reading?.temperature ?? 24.5;
-  const humidity = reading?.humidity ?? 45;
-  const moisture = reading?.moisture ?? 55;
-  const light = reading?.light ?? 800;
+  if (!activePlant) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyText}>No plants added yet</Text>
+
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("AddPlant")}
+        >
+          <Text style={styles.addButtonText}>Add your first plant</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const temperature = reading?.temperature ?? activePlant.vitals.temp;
+  const humidity = reading?.humidity ?? activePlant.vitals.humidity;
+  const moisture = reading?.moisture ?? activePlant.vitals.moisture;
+  const light = reading?.light ?? activePlant.vitals.light;
   const flowerState = reading?.flower_state ?? 2;
 
   const lastUpdated =
@@ -49,6 +71,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
         <View>
           <Text style={styles.appTitle}>Bloom</Text>
@@ -59,10 +82,12 @@ const HomeScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* ACTIVE PLANT CARD */}
       <View style={styles.potCard}>
         <View>
-          <Text style={styles.potTitle}>My Monstera</Text>
-          <Text style={styles.potSubtitle}>Monstera Deliciosa</Text>
+          <Text style={styles.potTitle}>{activePlant.name}</Text>
+          <Text style={styles.potSubtitle}>{activePlant.species}</Text>
+
           <View style={styles.chipRow}>
             <View style={styles.stateChip}>
               <View style={styles.stateDot} />
@@ -76,9 +101,11 @@ const HomeScreen: React.FC = () => {
                   : "Stressed"}
               </Text>
             </View>
+
             <Text style={styles.updatedText}>Updated {lastUpdated}</Text>
           </View>
         </View>
+
         <View style={styles.potEmojiBadge}>
           <Text style={styles.potEmoji}>
             {flowerState === 3
@@ -92,6 +119,7 @@ const HomeScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* ERRORS */}
       {error && (
         <View style={styles.errorCard}>
           <Ionicons name="warning" size={20} color="#EF4444" />
@@ -99,6 +127,7 @@ const HomeScreen: React.FC = () => {
         </View>
       )}
 
+      {/* LIVE VITALS */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -172,12 +201,33 @@ const HomeScreen: React.FC = () => {
   );
 };
 
+// --------------------
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F7",
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 18,
+    marginBottom: 16,
+  },
+  addButton: {
+    backgroundColor: "#22C55E",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 18,
+  },
+  addButtonText: {
+    color: "white",
+    fontWeight: "700",
   },
   header: {
     flexDirection: "row",

@@ -38,7 +38,7 @@ export async function scanForPots(
   console.log("🔍 Starting BLE scan…");
 
   const stop = manager.startDeviceScan(
-    [SERVICE_UUID],                    // Filter by your ESP32 service
+    null, // Remove the filter to scan for all devices
     { scanMode: 2 },
     (error, device) => {
       if (error) {
@@ -51,14 +51,10 @@ export async function scanForPots(
         device.name ??
         device.localName ??
         "";
+      console.log("🔍 Found device:", device.name); // Log all devices
 
-      if (!name) return;
-
-      // Only match your ESP32 devices
-      if (name.startsWith("BloomPot-")) {
-        console.log("🌱 FOUND POT:", device.id, name);
-        onDeviceFound(device);
-      }
+      // Call the callback for every device found
+      onDeviceFound(device);
     }
   );
 
