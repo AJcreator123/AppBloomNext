@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -15,17 +16,17 @@ import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
 import { useReadingsStore } from "../store/readingsStore";
 import { fetchLatestReading } from "../api/pots";
 
-import { usePlants } from "../context/PlantsContext";   // ← IMPORTANT!!!
+import { usePlants } from "../context/PlantsContext";
 
 const HomeScreen: React.FC = ({ navigation }: any) => {
-  // Load plants from context
   const { plants } = usePlants();
 
-  // If no plants → show empty screen
-  const activePlant = plants.length > 0 ? plants[0] : null;
+  // ⭐ Active plant (first plant)
+  const activePlant = plants && plants.length > 0 ? plants[0] : null;
 
-  // Real-time Supabase readings
-  useRealtimeReadings();
+  // ⭐ Realtime readings using plantId
+  useRealtimeReadings(activePlant?.supabasePlantId ?? null);
+
   const reading = useReadingsStore((s) => s.reading);
   const error = useReadingsStore((s) => s.error);
   const setReading = useReadingsStore((s) => s.setReading);
@@ -35,14 +36,17 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const latest = await fetchLatestReading();
+      const latest = await fetchLatestReading(activePlant?.supabasePlantId);
       if (latest) setReading(latest);
     } catch (err) {
       console.error("Refresh error:", err);
     }
     setRefreshing(false);
-  }, [setReading]);
+  }, [setReading, activePlant]);
 
+  // ------------------------------
+  // EMPTY STATE
+  // ------------------------------
   if (!activePlant) {
     return (
       <View style={styles.centered}>
@@ -58,17 +62,25 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
     );
   }
 
-  const temperature = reading?.temperature ?? activePlant.vitals.temp;
-  const humidity = reading?.humidity ?? activePlant.vitals.humidity;
-  const moisture = reading?.moisture ?? activePlant.vitals.moisture;
-  const light = reading?.light ?? activePlant.vitals.light;
+  // ------------------------------
+  // FALLBACKS
+  // ------------------------------
+  const v = activePlant.vitals || {};
+
+  const temperature = reading?.temperature ?? v.temp ?? 24;
+  const humidity = reading?.humidity ?? v.humidity ?? 50;
+  const moisture = reading?.moisture ?? v.moisture ?? 50;
+  const light = reading?.light ?? v.light ?? 800;
   const flowerState = reading?.flower_state ?? 2;
 
   const lastUpdated =
-    reading?.created_at != null
+    reading?.created_at
       ? new Date(reading.created_at).toLocaleTimeString()
       : "Just now";
 
+  // ------------------------------
+  // MAIN UI
+  // ------------------------------
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -84,8 +96,10 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
       {/* ACTIVE PLANT CARD */}
       <View style={styles.potCard}>
-        <View>
+        <View style={{ flex: 1 }}>
+          {/* ⭐ BOLDER NAME FOR VISIBILITY */}
           <Text style={styles.potTitle}>{activePlant.name}</Text>
+
           <Text style={styles.potSubtitle}>{activePlant.species}</Text>
 
           <View style={styles.chipRow}>
@@ -106,16 +120,13 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
           </View>
         </View>
 
-        <View style={styles.potEmojiBadge}>
-          <Text style={styles.potEmoji}>
-            {flowerState === 3
-              ? "🪴"
-              : flowerState === 2
-              ? "🌿"
-              : flowerState === 1
-              ? "🥀"
-              : "⚠️"}
-          </Text>
+        {/* Plant Image */}
+        <View style={styles.imageWrapper}>
+          <Image
+            source={{ uri: activePlant.image }}
+            style={styles.plantImage}
+            resizeMode="cover"
+          />
         </View>
       </View>
 
@@ -139,7 +150,7 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
         <StatusCard
           label="Temperature"
-          value={temperature.toFixed(1)}
+          value={Number(temperature).toFixed(1)}
           unit="°C"
           status={
             temperature >= 18 && temperature <= 28
@@ -154,7 +165,7 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
         <StatusCard
           label="Humidity"
-          value={humidity.toFixed(0)}
+          value={Number(humidity).toFixed(0)}
           unit="%"
           status={
             humidity >= 50 && humidity <= 70
@@ -169,7 +180,7 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
         <StatusCard
           label="Soil Moisture"
-          value={moisture.toFixed(0)}
+          value={Number(moisture).toFixed(0)}
           unit="%"
           status={
             moisture >= 60 && moisture <= 80
@@ -184,7 +195,7 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
         <StatusCard
           label="Light Level"
-          value={light.toFixed(0)}
+          value={Number(light).toFixed(0)}
           unit="lux"
           status={
             light >= 500 && light <= 2000
@@ -200,8 +211,6 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
     </View>
   );
 };
-
-// --------------------
 
 const styles = StyleSheet.create({
   container: {
@@ -229,6 +238,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "700",
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -253,25 +263,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   potCard: {
     backgroundColor: "#111827",
     borderRadius: 22,
     padding: 18,
+
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 18,
+
+    // ⭐ REMOVE GREY OUTLINE COMPLETELY
+    borderWidth: 0,
+    borderColor: "transparent",
+
+    // ⭐ OPTIONAL: NICE SHADOW
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
+
   potTitle: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "800", // ⭐ bolder
     color: "#F9FAFB",
   },
   potSubtitle: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: "#CBD5E1",
     marginTop: 2,
   },
+
   chipRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -302,26 +327,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#9CA3AF",
   },
-  potEmojiBadge: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+
+  imageWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 20,
+    overflow: "hidden",
     backgroundColor: "#1F2937",
-    justifyContent: "center",
-    alignItems: "center",
+    marginLeft: 14,
   },
-  potEmoji: {
-    fontSize: 30,
+  plantImage: {
+    width: "100%",
+    height: "100%",
   },
+
   scroll: {
     flex: 1,
   },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#020617",
     marginBottom: 12,
   },
+
   errorCard: {
     flexDirection: "row",
     alignItems: "center",

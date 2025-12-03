@@ -1,3 +1,4 @@
+// src/screens/ProfileScreen.tsx
 import React, { useEffect, useRef } from "react";
 import {
   View,
@@ -11,10 +12,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { usePlants } from "../context/PlantsContext";   // ⭐ import context
 
 export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
+
+  // ⭐ Get plants from context (real–time)
+  const { plants } = usePlants();
+  const plantCount = plants.length;
 
   useEffect(() => {
     Animated.parallel([
@@ -47,12 +53,14 @@ export default function ProfileScreen() {
       <Text style={s.name}>Ayaan Jamal</Text>
       <Text style={s.sub}>Plant caretaker • Growth mindset 🌱</Text>
 
-      {/* Glass Stats */}
+      {/* Stats */}
       <View style={s.statsRow}>
         <View style={s.statCard}>
           <Ionicons name="leaf-outline" size={22} color={colors.accent} />
           <Text style={s.statLabel}>Plants</Text>
-          <Text style={s.statValue}>3</Text>
+
+          {/* ⭐ Auto-updates when a plant is added */}
+          <Text style={s.statValue}>{plantCount}</Text>
         </View>
 
         <View style={s.statCard}>
@@ -68,7 +76,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Settings Section */}
+      {/* Settings */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>Settings</Text>
 

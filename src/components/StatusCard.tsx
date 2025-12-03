@@ -33,6 +33,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
 
   return (
     <View style={styles.card}>
+      {/* HEADER ROW */}
       <View style={styles.row}>
         <View style={styles.labelRow}>
           <View style={styles.iconBadge}>
@@ -41,6 +42,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
           <Text style={styles.label}>{label}</Text>
         </View>
 
+        {/* STATUS PILL */}
         <View
           style={[
             styles.pill,
@@ -60,6 +62,10 @@ const StatusCard: React.FC<StatusCardProps> = ({
         </View>
       </View>
 
+      {/* ⭐ NEW: TEXT UNDER PILL SAYING WHAT THE SENSOR IS */}
+      <Text style={styles.sensorLabel}>{label}</Text>
+
+      {/* VALUE */}
       <View style={styles.valueRow}>
         <Text style={styles.value}>{value}</Text>
         {unit ? <Text style={styles.unit}>{unit}</Text> : null}
@@ -84,15 +90,18 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 3,
   },
+
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
   },
+
   iconBadge: {
     width: 26,
     height: 26,
@@ -102,11 +111,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
+
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: "#020617",
   },
+
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -115,6 +126,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
+
   pillDot: {
     width: 6,
     height: 6,
@@ -122,26 +134,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#22C55E",
     marginRight: 6,
   },
+
   pillText: {
     fontSize: 11,
     fontWeight: "600",
   },
+
+  // ⭐ EXACTLY WHAT YOU ASKED FOR
+  sensorLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+  },
+
   valueRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginTop: 8,
+    marginTop: 6,
   },
+
   value: {
     fontSize: 32,
     fontWeight: "700",
     color: "#020617",
   },
+
   unit: {
     fontSize: 14,
     color: "#6B7280",
     marginLeft: 6,
     marginBottom: 4,
   },
+
   helper: {
     marginTop: 6,
     fontSize: 12,

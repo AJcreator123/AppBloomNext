@@ -1,3 +1,4 @@
+// src/screens/PlantDetailScreen.tsx
 import React from "react";
 import {
   View,
@@ -12,14 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
 import StatusCard from "../components/StatusCard";
+
 import { usePlants } from "../context/PlantsContext";
+import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
+import { useReadingsStore } from "../store/readingsStore";
 
 export default function PlantDetailScreen({ route, navigation }: any) {
   const { plants } = usePlants();
 
-  // Support BOTH styles:
-  // 1) navigation.navigate('PlantDetail', { plant })
-  // 2) navigation.navigate('PlantDetail', { plantId })
   const routePlant = route?.params?.plant;
   const routePlantId = route?.params?.plantId;
 
@@ -31,17 +32,9 @@ export default function PlantDetailScreen({ route, navigation }: any) {
   }
 
   if (!plant) {
-    // Debug view so we can SEE what’s coming through
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorTitle}>No plant found 🥲</Text>
-        <Text style={styles.errorText}>
-          I couldn’t match a plant for this screen.
-        </Text>
-        <Text style={styles.errorTextSmall}>
-          route.params = {JSON.stringify(route?.params || {}, null, 2)}
-        </Text>
-
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.errorButton}
@@ -52,12 +45,17 @@ export default function PlantDetailScreen({ route, navigation }: any) {
     );
   }
 
-  // Safeguard vitals
-  const vitals = plant.vitals || {
-    temp: 0,
-    moisture: 0,
-    light: 0,
-    humidity: 0,
+  // ⭐ Subscribe to realtime readings for this plant
+  useRealtimeReadings(plant.supabasePlantId);
+
+  const reading = useReadingsStore((s) => s.reading);
+
+  // fallback vitals
+  const v = {
+    temp: reading?.temperature ?? plant.vitals.temp,
+    moisture: reading?.moisture ?? plant.vitals.moisture,
+    light: reading?.light ?? plant.vitals.light,
+    humidity: reading?.humidity ?? plant.vitals.humidity,
   };
 
   return (
@@ -70,7 +68,6 @@ export default function PlantDetailScreen({ route, navigation }: any) {
       >
         <View style={styles.headerOverlay} />
 
-        {/* Back button */}
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.back}
@@ -85,46 +82,46 @@ export default function PlantDetailScreen({ route, navigation }: any) {
       </ImageBackground>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* METRICS ROW 1 */}
+        {/* METRIC ROW 1 */}
         <View style={styles.metricsRow}>
           <StatusCard
             title="Moisture"
-            value={vitals.moisture}
+            value={v.moisture}
             unit="%"
             icon="water-outline"
-            tone={vitals.moisture < 40 ? "warn" : "ok"}
+            tone={v.moisture < 40 ? "warn" : "ok"}
           />
           <StatusCard
             title="Light"
-            value={vitals.light}
+            value={v.light}
             unit="lux"
             icon="sunny-outline"
           />
         </View>
 
-        {/* METRICS ROW 2 */}
+        {/* METRIC ROW 2 */}
         <View style={[styles.metricsRow, { marginTop: 12 }]}>
           <StatusCard
             title="Temperature"
-            value={vitals.temp}
+            value={v.temp}
             unit="°C"
             icon="thermometer-outline"
           />
           <StatusCard
             title="Humidity"
-            value={vitals.humidity ?? 0}
+            value={v.humidity}
             unit="%"
             icon="cloud-outline"
           />
         </View>
 
-        {/* CARE RECOMMENDATION */}
+        {/* CARE CARD */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Care Recommendation</Text>
           <Text style={styles.cardText}>
-            {vitals.moisture < 40
-              ? "Soil moisture looks low — water your plant thoroughly until some water drains out from the bottom of the pot."
-              : "Your plant looks happy! Keep it in bright, indirect light and water when the top 2–3cm of soil feels dry."}
+            {v.moisture < 40
+              ? "Soil moisture is low — water your plant well."
+              : "Your plant looks healthy! Keep it in bright, indirect light."}
           </Text>
         </View>
 
@@ -137,7 +134,6 @@ export default function PlantDetailScreen({ route, navigation }: any) {
           <Text style={styles.row}>• Humidity: 40–60%</Text>
         </View>
 
-        {/* HISTORY BUTTON */}
         <TouchableOpacity
           style={styles.historyButton}
           onPress={() =>
@@ -155,7 +151,7 @@ export default function PlantDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  header: { height: 250, justifyContent: "flex-end" },
+  header: { height: 260, justifyContent: "flex-end" },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.25)",
@@ -173,7 +169,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     color: colors.text,
     fontSize: 30,
-    letterSpacing: 0.5,
   },
   sub: {
     fontFamily: fonts.sans,
@@ -225,43 +220,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Error state UI
   errorContainer: {
     flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    alignItems: "center",
+    backgroundColor: colors.bg,
   },
   errorTitle: {
-    fontFamily: fonts.display,
     fontSize: 24,
     color: colors.text,
-    marginBottom: 8,
+    fontFamily: fonts.display,
   },
   errorText: {
-    fontFamily: fonts.sans,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  errorTextSmall: {
-    fontFamily: fonts.sans,
-    color: colors.textMuted,
-    fontSize: 12,
     marginTop: 8,
-    textAlign: "center",
+    color: colors.textMuted,
   },
   errorButton: {
     marginTop: 18,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 999,
     backgroundColor: colors.primary,
+    borderRadius: 999,
   },
   errorButtonText: {
-    color: "white",
+    color: "#fff",
     fontFamily: fonts.sansSemi,
-    fontSize: 14,
   },
 });

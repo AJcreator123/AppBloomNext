@@ -11,6 +11,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import PlantDetailScreen from "../screens/PlantDetailScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import AddPlantScreen from "../screens/AddPlantScreen";
+import PairBloomPotScreen from "../screens/PairBloomPotScreen";
 
 import colors from "../theme/colors";
 
@@ -20,18 +21,25 @@ const Tab = createBottomTabNavigator();
 function Tabs() {
   return (
     <Tab.Navigator
-      initialRouteName="Plants"   // ← DEFAULT TAB IS NOW PLANTS
+      initialRouteName="Plants"
       screenOptions={({ route }) => ({
         headerShown: false,
+
+        /** ⭐ TAB BAR RAISED EVEN MORE ⭐ */
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.line,
-          height: 72,
-          paddingTop: 10,      // ← ICONS MOVE UP
-          paddingBottom: 6,
+
+          height: 94,        // ⬆ even taller bar
+          paddingTop: 18,    // ⬆ move icons further up
+          paddingBottom: 20, // ⬆ clears Android nav area perfectly
+          marginBottom: 14,  // ⬆ lifts entire bar up a bit more
         },
+
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+
+        /** ⭐ ICON POSITION EVEN HIGHER ⭐ */
         tabBarIcon: ({ color }) => {
           let icon = "leaf-outline";
 
@@ -39,7 +47,13 @@ function Tabs() {
           if (route.name === "Care") icon = "heart-outline";
           if (route.name === "Profile") icon = "person-outline";
 
-          return <Ionicons name={icon as any} size={24} color={color} />;
+          return <Ionicons name={icon as any} size={28} color={color} />;
+        },
+
+        /** ⭐ LABEL POSITION ADJUSTED ⭐ */
+        tabBarLabelStyle: {
+          marginTop: -6, // closer to icons
+          fontSize: 12,
         },
       })}
     >
@@ -49,6 +63,14 @@ function Tabs() {
     </Tab.Navigator>
   );
 }
+
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.bg,
+  },
+};
 
 export default function AppNavigator() {
   return (
@@ -77,15 +99,13 @@ export default function AppNavigator() {
           component={AddPlantScreen}
           options={{ headerShown: false }}
         />
+
+        <Stack.Screen
+          name="PairBloomPotScreen"
+          component={PairBloomPotScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-
-const navTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.bg,
-  },
-};

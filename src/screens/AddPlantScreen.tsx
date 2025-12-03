@@ -8,233 +8,70 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  FlatList,
 } from "react-native";
+
+import ModalSelector from "react-native-modal-selector";
 
 import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
-import { usePlants } from "../context/PlantsContext";
-
-// BLE client functions
-import {
-  scanForPots,
-  connectToDevice,
-  writePassword,
-  listenForResponse,
-  SERVICE_UUID,
-} from "../ble/client";
-
-import {
-  SSID_CHAR_UUID,
-  PASS_CHAR_UUID,
-  CONNECT_CHAR_UUID,
-  STATUS_CHAR_UUID
-} from "../ble/uuids";
-
-type NearbyPot = {
-  id: string;
-  name: string;
-  macAddress: string;
-  plant_id: number;
-};
-
-// ==============================
-//   NAME EXTRACTION FIX (IMPORTANT)
-// ==============================
-function extractPotName(device: any): string {
-  if (device.name) return device.name;
-  if (device.localName) return device.localName;
-
-  // Android sometimes hides names unless decoded from manufacturer data
-  try {
-    if (device.manufacturerData) {
-      const decoded = Buffer.from(device.manufacturerData, "base64").toString("utf8");
-      if (decoded.includes("BloomPot-")) return decoded;
-    }
-  } catch (_) {}
-
-  return "";
-}
+import speciesList from "../data/speciesList"; // ⭐ YOU WILL CREATE THIS FILE
 
 export default function AddPlantScreen({ navigation }: any) {
-  const { addPlant } = usePlants();
-
   const [name, setName] = useState("");
   const [species, setSpecies] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
-  const [isScanning, setIsScanning] = useState(false);
-  const [nearbyPots, setNearbyPots] = useState<NearbyPot[]>([]);
-  const [selectedPot, setSelectedPot] = useState<NearbyPot | null>(null);
-  const [wifiSsid, setWifiSsid] = useState("");
-  const [wifiPassword, setWifiPassword] = useState("");
+  const onNext = () => {
+    const trimmedName = name.trim();
+    const trimmedSpecies = species.trim();
+    const trimmedImage = imageUrl.trim();
 
-  // ==============================
-  //           SCANNING
-  // ==============================
-  const startScan = async () => {
-    setIsScanning(true);
-    setNearbyPots([]);
+    if (!trimmedName || !trimmedSpecies) {
+      Alert.alert("Missing info", "Please enter both a plant name and species.");
+      return;
+    }
 
-    const stopScan = await scanForPots((device: any) => {
-      // Show full raw data for debugging too
-      console.log("📡 RAW DEVICE:", {
-        id: device.id,
-        name: device.name,
-        localName: device.localName,
-        manufacturerData: device.manufacturerData,
-        serviceUUIDs: device.serviceUUIDs,
-      });
-
-      const potName = extractPotName(device);
-      console.log("🟦 Extracted Name:", potName);
-
-      // Only accept REAL BloomPot devices
-      if (!potName.startsWith("BloomPot-")) return;
-
-      // Add to list if not already
-      setNearbyPots((prev) => {
-        if (prev.find((x) => x.id === device.id)) return prev;
-
-        return [
-          ...prev,
-          {
-            id: device.id,
-            name: potName,
-            macAddress: device.id,
-            plant_id: 1,
-          },
-        ];
-      });
+    navigation.navigate("PairBloomPotScreen", {
+      name: trimmedName,
+      species: trimmedSpecies,
+      imageUrl: trimmedImage,
     });
-
-    // Auto stop scan
-    setTimeout(() => {
-      stopScan();
-      setIsScanning(false);
-      console.log("🛑 Scan stopped.");
-    }, 6000);
   };
 
-  // ==============================
-  //       SAVE TO LOCAL DB
-  // ==============================
-  const savePlant = () => {
-    if (!selectedPot) return;
-
-    addPlant({
-      name: name.trim(),
-      species: species.trim(),
-      image:
-        imageUrl.trim() ||
-        "https://images.pexels.com/photos/3076899/pexels-photo-3076899.jpeg",
-      supabasePlantId: selectedPot.plant_id,
-      potMacAddress: selectedPot.macAddress,
-      vitals: {
-        temp: 24,
-        moisture: 45,
-        light: 900,
-        humidity: 50,
-      },
-    });
-
-    navigation.goBack();
-  };
-
-  // ==============================
-  //   FINAL SAVE + WIFI SETUP
-  // ==============================
-  const onSave = async () => {
-    if (!name.trim() || !species.trim()) {
-      Alert.alert("Missing info", "Please enter a name and species.");
-      return;
-    }
-
-    if (!selectedPot) {
-      Alert.alert("Select Pot", "Please choose a Bloom Pot to link.");
-      return;
-    }
-
-    if (!wifiSsid.trim()) {
-      Alert.alert("WiFi Needed", "Enter your WiFi network name.");
-      return;
-    }
-
-    const deviceId = selectedPot.id;
-
-    try {
-      console.log("🔗 Connecting to ESP32...");
-      await connectToDevice(deviceId);
-
-      // 1. Send SSID
-      console.log("📡 Sending WiFi SSID:", wifiSsid);
-      await writePassword(deviceId, SERVICE_UUID, SSID_CHAR_UUID, wifiSsid);
-
-      // 2. Send Password
-      console.log("🔐 Sending WiFi password...");
-      await writePassword(deviceId, SERVICE_UUID, PASS_CHAR_UUID, wifiPassword);
-
-      // 3. Listen for ESP32 result
-      console.log("👂 Listening...");
-      const unsub = await listenForResponse(
-        deviceId,
-        SERVICE_UUID,
-        STATUS_CHAR_UUID,
-        (status) => {
-          console.log("📶 ESP32 Status:", status);
-
-          if (status === "CONNECTED") {
-            unsub.remove();
-            Alert.alert("Success!", "ESP32 connected to WiFi.");
-            savePlant();
-          } else if (status === "FAIL") {
-            unsub.remove();
-            Alert.alert("Connection Failed", "Incorrect WiFi credentials.");
-          }
-        }
-      );
-
-      // 4. Trigger WiFi connect
-      console.log("🚀 Triggering WiFi connection...");
-      await writePassword(deviceId, SERVICE_UUID, CONNECT_CHAR_UUID, "CONNECT");
-
-      // Safety timeout
-      setTimeout(() => {
-        unsub.remove();
-        Alert.alert("Timeout", "No response from ESP32.");
-      }, 30000);
-
-    } catch (err) {
-      console.log("BLE ERROR:", err);
-      Alert.alert("Bluetooth error", "Could not connect to Bloom Pot.");
-    }
-  };
-
-  // ==============================
-  //               UI
-  // ==============================
   return (
     <View style={s.container}>
       <Text style={s.title}>Add a new plant</Text>
-      <Text style={s.subtitle}>Link this plant to a Bloom Pot.</Text>
+      <Text style={s.subtitle}>
+        First, fill in your plant details. On the next screen, you’ll link a Bloom Pot.
+      </Text>
 
-      {/* BASIC INFO */}
+      {/* Name */}
       <TextInput
         style={s.input}
-        placeholder="Plant name (e.g. Monstera)"
+        placeholder="Plant name (e.g. Freya)"
         placeholderTextColor={colors.textMuted}
         value={name}
         onChangeText={setName}
       />
 
-      <TextInput
-        style={s.input}
-        placeholder="Species (e.g. Monstera deliciosa)"
-        placeholderTextColor={colors.textMuted}
-        value={species}
-        onChangeText={setSpecies}
-      />
+      {/* SPECIES DROPDOWN */}
+      <ModalSelector
+        data={speciesList}
+        initValue={species || "Select plant species"}
+        onChange={(option) => setSpecies(option.label)}
+        style={s.selectorWrapper}
+        selectTextStyle={s.selectorText}
+        optionTextStyle={s.selectorOption}
+        optionContainerStyle={s.selectorOptionContainer}
+      >
+        <View style={s.selectorInner}>
+          <Text style={species ? s.selectorSelected : s.selectorPlaceholder}>
+            {species || "Select plant species"}
+          </Text>
+        </View>
+      </ModalSelector>
 
+      {/* Image URL */}
       <TextInput
         style={s.input}
         placeholder="Image URL (optional)"
@@ -243,78 +80,14 @@ export default function AddPlantScreen({ navigation }: any) {
         onChangeText={setImageUrl}
       />
 
-      {/* BLE SECTION */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Link with a Bloom Pot</Text>
-
-        <TouchableOpacity
-          style={[s.scanButton, isScanning && { opacity: 0.6 }]}
-          onPress={startScan}
-          disabled={isScanning}
-        >
-          <Text style={s.scanButtonText}>
-            {isScanning ? "Scanning…" : "Scan for pots"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* POT LIST */}
-        {nearbyPots.length > 0 && (
-          <FlatList
-            data={nearbyPots}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  s.potRow,
-                  selectedPot?.id === item.id && s.potRowSelected,
-                ]}
-                onPress={() => setSelectedPot(item)}
-              >
-                <Text style={s.potName}>{item.name}</Text>
-                <Text style={s.potMac}>{item.macAddress}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-        {selectedPot && (
-          <>
-            <Text style={s.label}>WiFi Network Name (SSID)</Text>
-            <TextInput
-              style={s.input}
-              placeholder="Your WiFi name"
-              placeholderTextColor={colors.textMuted}
-              value={wifiSsid}
-              onChangeText={setWifiSsid}
-              autoCapitalize="none"
-            />
-
-            <Text style={s.label}>WiFi Password</Text>
-            <TextInput
-              style={s.input}
-              placeholder="WiFi password"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              value={wifiPassword}
-              onChangeText={setWifiPassword}
-              autoCapitalize="none"
-            />
-
-            <Text style={s.hint}>
-              The ESP32 will connect to this WiFi and send sensor data to the cloud.
-            </Text>
-          </>
-        )}
-      </View>
-
-      <TouchableOpacity style={s.button} onPress={onSave}>
-        <Text style={s.buttonText}>Save Plant</Text>
+      {/* Button */}
+      <TouchableOpacity style={s.button} onPress={onNext}>
+        <Text style={s.buttonText}>Next: Pair Bloom Pot</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-// Styles
 const s = StyleSheet.create({
   container: {
     flex: 1,
@@ -331,8 +104,9 @@ const s = StyleSheet.create({
   subtitle: {
     fontFamily: fonts.sans,
     color: colors.textMuted,
-    marginBottom: 18,
+    marginBottom: 20,
   },
+
   input: {
     backgroundColor: colors.panel,
     borderRadius: 12,
@@ -342,72 +116,46 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     fontFamily: fonts.sans,
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  section: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+
+  selectorWrapper: {
+    marginBottom: 14,
+  },
+  selectorInner: {
     backgroundColor: colors.panel,
-  },
-  sectionTitle: {
-    fontFamily: fonts.sansSemi,
-    color: colors.text,
-    fontSize: 15,
-    marginBottom: 8,
-  },
-  scanButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  scanButtonText: {
-    fontFamily: fonts.sansSemi,
-    color: "#fff",
-    fontSize: 14,
-  },
-  potRow: {
-    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  potRowSelected: {
-    borderColor: colors.primary,
-    backgroundColor: "#172019",
-  },
-  potName: {
-    fontFamily: fonts.sansSemi,
-    color: colors.text,
-    fontSize: 15,
-  },
-  potMac: {
-    fontFamily: fonts.sans,
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 3,
-  },
-  label: {
-    fontFamily: fonts.sansSemi,
-    color: colors.text,
-    marginTop: 10,
-  },
-  hint: {
-    fontFamily: fonts.sans,
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 8,
-    lineHeight: 16,
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
     paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  selectorPlaceholder: {
+    color: colors.textMuted,
+    fontFamily: fonts.sans,
+  },
+  selectorSelected: {
+    color: colors.text,
+    fontFamily: fonts.sansSemi,
+  },
+
+  selectorText: {
+    color: colors.text,
+  },
+  selectorOption: {
+    fontSize: 16,
+    padding: 12,
+    color: "#000",
+  },
+  selectorOptionContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+  },
+
+  button: {
+    marginTop: 20,
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",
   },

@@ -4,16 +4,6 @@ import { supabase } from "../lib/supabase";
 import { useReadingsStore } from "../store/readingsStore";
 import type { PotReading } from "../types/PotReading";
 
-/**
- * Hook to subscribe to realtime readings from Supabase
- * 
- * This is the BETTER alternative to useLiveReadings:
- * - ⚡ Instant updates (no polling delay)
- * - 🔋 Better battery life (only updates when data changes)
- * - 💰 Lower costs (no constant HTTP requests)
- * 
- * To use: Replace useLiveReadings() with useRealtimeReadings()
- */
 export function useRealtimeReadings() {
   const setReading = useReadingsStore((s) => s.setReading);
   const setError = useReadingsStore((s) => s.setError);
@@ -21,7 +11,9 @@ export function useRealtimeReadings() {
   useEffect(() => {
     let isMounted = true;
 
-    // Fetch initial reading
+    // -------------------------
+    // 1) INITIAL FETCH (SAFE)
+    // -------------------------
     const fetchInitial = async () => {
       try {
         const { data, error } = await supabase
@@ -29,26 +21,34 @@ export function useRealtimeReadings() {
           .select("*")
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle(); // ⭐ never throws when empty
 
-        if (error) throw error;
+        if (error) {
+          console.error("🔥 Initial fetch full error:", error);
+          if (isMounted) setError(error.message);
+          return;
+        }
 
         if (data && isMounted) {
+          console.log("🌱 Initial reading loaded:", data);
           setReading(data as PotReading);
           setError(null);
+        } else {
+          console.log("ℹ No initial readings found (table empty).");
         }
-      } catch (error) {
-        if (isMounted) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to fetch initial reading";
-          console.error("Initial fetch error:", errorMessage);
-          setError(errorMessage);
-        }
+      } catch (e: any) {
+        console.error("🔥 Unexpected initial fetch error:", e);
+        if (isMounted) setError(String(e.message ?? e));
       }
     };
 
     fetchInitial();
 
-    // Subscribe to realtime changes
+    // -------------------------
+    // 2) REALTIME SUBSCRIPTION
+    // -------------------------
+    console.log("📡 Subscribing to realtime plant_readings…");
+
     const channel = supabase
       .channel("plant_readings_changes")
       .on(
@@ -59,25 +59,29 @@ export function useRealtimeReadings() {
           table: "plant_readings",
         },
         (payload) => {
-          if (isMounted) {
-            console.log("📡 New reading received:", payload.new);
-            setReading(payload.new as PotReading);
-            setError(null);
-          }
+          if (!isMounted) return;
+
+          console.log("📡 Realtime update received:", payload.new);
+
+          setReading(payload.new as PotReading);
+          setError(null);
         }
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("✅ Subscribed to realtime readings");
-        } else if (status === "CHANNEL_ERROR") {
-          console.error("❌ Realtime subscription error");
-          setError("Failed to connect to realtime updates");
+        console.log("🔌 Realtime subscription status:", status);
+
+        if (status === "CHANNEL_ERROR") {
+          console.error("❌ Realtime subscription failure");
+          if (isMounted) setError("Realtime connection error");
         }
       });
 
+    // -------------------------
+    // 3) CLEANUP
+    // -------------------------
     return () => {
       isMounted = false;
-      console.log("🔌 Unsubscribing from realtime readings");
+      console.log("🔌 Unsubscribing from realtime readings…");
       supabase.removeChannel(channel);
     };
   }, [setReading, setError]);

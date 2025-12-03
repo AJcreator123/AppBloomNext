@@ -11,7 +11,6 @@ import { PermissionsAndroid, Platform } from "react-native";
 
 export const manager = new BleManager();
 
-// Your ESP32 service UUID
 export const SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
 
 /**
@@ -28,51 +27,35 @@ export async function requestPermissions() {
 }
 
 /**
- * Scan for BloomPot devices
+ * Scan for devices
  */
-export async function scanForPots(
-  onDeviceFound: (d: Device) => void
-) {
+export async function scanForPots(onDeviceFound: (d: Device) => void) {
   await requestPermissions();
 
   console.log("🔍 Starting BLE scan…");
 
-  const stop = manager.startDeviceScan(
-    null, // Remove the filter to scan for all devices
-    { scanMode: 2 },
-    (error, device) => {
-      if (error) {
-        console.log("Scan error:", error);
-        return;
-      }
-      if (!device) return;
-
-      const name =
-        device.name ??
-        device.localName ??
-        "";
-      console.log("🔍 Found device:", device.name); // Log all devices
-
-      // Call the callback for every device found
-      onDeviceFound(device);
+  manager.startDeviceScan(null, { scanMode: 2 }, (error, device) => {
+    if (error) {
+      console.log("Scan error:", error);
+      return;
     }
-  );
+    if (!device) return;
 
-  // Return stop function
+    onDeviceFound(device);
+  });
+
   return () => {
     console.log("🛑 Stopping scan");
     manager.stopDeviceScan();
-    stop && stop.remove?.();
   };
 }
 
 /**
- * Connect + discover services
+ * Connect + discover
  */
 export async function connectToDevice(deviceId: string): Promise<Device> {
   const device = await manager.connectToDevice(deviceId, { autoConnect: false });
 
-  // Force Android to refresh BLE GATT cache
   await device.discoverAllServicesAndCharacteristics();
   await device.requestMTU(256);
 
@@ -80,19 +63,19 @@ export async function connectToDevice(deviceId: string): Promise<Device> {
 }
 
 /**
- * Write password over BLE in base64
+ * Write over BLE
  */
 export async function writePassword(
   deviceId: string,
   serviceUUID: string,
   characteristicUUID: string,
-  password: string
+  value: string
 ) {
-  const base64 = Buffer.from(password, "utf8").toString("base64");
+  const base64 = Buffer.from(value, "utf8").toString("base64");
 
-  console.log("🔐 Sending password");
+  console.log("🔐 writePassword()", { char: characteristicUUID, value });
 
-  return await manager.writeCharacteristicWithResponseForDevice(
+  return manager.writeCharacteristicWithResponseForDevice(
     deviceId,
     serviceUUID,
     characteristicUUID,
@@ -101,21 +84,22 @@ export async function writePassword(
 }
 
 /**
- * Listen for notify messages ("OK" / "FAIL")
+ * ⭐⭐⭐ FIXED VERSION ⭐⭐⭐
+ * Listen for notify messages (NOT async, never awaited)
  */
-export async function listenForResponse(
+export function listenForResponse(
   deviceId: string,
   serviceUUID: string,
   characteristicUUID: string,
   callback: (text: string) => void
-): Promise<Subscription> {
-  console.log("👂 Listening for BLE response…");
+): Subscription {
+  console.log("👂 Subscribing to notifications…");
 
-  return manager.monitorCharacteristicForDevice(
+  const subscription = manager.monitorCharacteristicForDevice(
     deviceId,
     serviceUUID,
     characteristicUUID,
-    (error, characteristic: Characteristic | null) => {
+    (error, characteristic) => {
       if (error) {
         console.log("Notify error:", error);
         return;
@@ -123,10 +107,11 @@ export async function listenForResponse(
       if (!characteristic?.value) return;
 
       const decoded = Buffer.from(characteristic.value, "base64").toString("utf8");
-
       console.log("📩 Notify:", decoded);
 
       callback(decoded);
     }
   );
+
+  return subscription; // <-- returns a real subscription
 }
