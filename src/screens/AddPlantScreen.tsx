@@ -11,38 +11,43 @@ import {
 } from "react-native";
 
 import ModalSelector from "react-native-modal-selector";
+import { Ionicons } from "@expo/vector-icons";
 
 import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
-import speciesList from "../data/speciesList"; // ⭐ YOU WILL CREATE THIS FILE
+import speciesList from "../data/speciesList"; // ✅ now database-driven
 
 export default function AddPlantScreen({ navigation }: any) {
   const [name, setName] = useState("");
-  const [species, setSpecies] = useState("");
+  const [species, setSpecies] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
 
   const onNext = () => {
     const trimmedName = name.trim();
-    const trimmedSpecies = species.trim();
     const trimmedImage = imageUrl.trim();
 
-    if (!trimmedName || !trimmedSpecies) {
+    if (!trimmedName || !species) {
       Alert.alert("Missing info", "Please enter both a plant name and species.");
       return;
     }
 
     navigation.navigate("PairBloomPotScreen", {
       name: trimmedName,
-      species: trimmedSpecies,
+      speciesCommonName: species, // ✅ canonical database key
       imageUrl: trimmedImage,
     });
   };
 
   return (
     <View style={s.container}>
+      {/* Back */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={s.backButton}>
+        <Ionicons name="chevron-back" size={28} color={colors.text} />
+      </TouchableOpacity>
+
       <Text style={s.title}>Add a new plant</Text>
       <Text style={s.subtitle}>
-        First, fill in your plant details. On the next screen, you’ll link a Bloom Pot.
+        First, select the plant species. On the next screen, you’ll link a Bloom Pot.
       </Text>
 
       {/* Name */}
@@ -54,11 +59,11 @@ export default function AddPlantScreen({ navigation }: any) {
         onChangeText={setName}
       />
 
-      {/* SPECIES DROPDOWN */}
+      {/* Species dropdown — DATABASE DRIVEN */}
       <ModalSelector
         data={speciesList}
         initValue={species || "Select plant species"}
-        onChange={(option) => setSpecies(option.label)}
+        onChange={(option) => setSpecies(option.key)}
         style={s.selectorWrapper}
         selectTextStyle={s.selectorText}
         optionTextStyle={s.selectorOption}
@@ -80,7 +85,7 @@ export default function AddPlantScreen({ navigation }: any) {
         onChangeText={setImageUrl}
       />
 
-      {/* Button */}
+      {/* Next */}
       <TouchableOpacity style={s.button} onPress={onNext}>
         <Text style={s.buttonText}>Next: Pair Bloom Pot</Text>
       </TouchableOpacity>
@@ -95,6 +100,12 @@ const s = StyleSheet.create({
     paddingTop: 40,
     paddingHorizontal: 18,
   },
+
+  backButton: {
+    marginBottom: 10,
+    width: 40,
+  },
+
   title: {
     fontFamily: fonts.display,
     fontSize: 26,

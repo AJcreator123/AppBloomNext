@@ -18,6 +18,16 @@ import { usePlants } from "../context/PlantsContext";
 import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
 import { useReadingsStore } from "../store/readingsStore";
 
+// ✅ Bloom imports
+import {
+  bloompotStep,
+  createInitialBloompotState,
+} from "../engine/bloomModel";
+import {
+  findPlantProfileByCommonName,
+  PlantProfile,
+} from "../engine/plantProfiles";
+
 export default function PlantDetailScreen({ route, navigation }: any) {
   const { plants } = usePlants();
 
@@ -45,18 +55,40 @@ export default function PlantDetailScreen({ route, navigation }: any) {
     );
   }
 
-  // ⭐ Subscribe to realtime readings for this plant
+  // 🔁 Subscribe to realtime readings for this plant
   useRealtimeReadings(plant.supabasePlantId);
-
   const reading = useReadingsStore((s) => s.reading);
 
-  // fallback vitals
+  // Normalize vitals (realtime or fallback)
   const v = {
     temp: reading?.temperature ?? plant.vitals.temp,
     moisture: reading?.moisture ?? plant.vitals.moisture,
     light: reading?.light ?? plant.vitals.light,
     humidity: reading?.humidity ?? plant.vitals.humidity,
   };
+
+  // 🌱 Lookup plant profile from database
+  const profile: PlantProfile | undefined =
+    findPlantProfileByCommonName(plant.species);
+
+  // 🌿 Run Bloom model (only if profile exists)
+  const modelOutput = profile
+    ? bloompotStep(
+        {
+          ...createInitialBloompotState(profile),
+          W: v.moisture / 100, // convert % → 0–1
+        },
+        {
+          temperatureC: v.temp,
+          humidityPct: v.humidity,
+          lightLux: v.light,
+          dtHours: 0.1,
+        },
+        profile
+      )
+    : null;
+
+  const advice = modelOutput?.advice;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -115,23 +147,26 @@ export default function PlantDetailScreen({ route, navigation }: any) {
           />
         </View>
 
-        {/* CARE CARD */}
+        {/* 🌿 MODEL-DRIVEN CARE CARD */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Care Recommendation</Text>
-          <Text style={styles.cardText}>
-            {v.moisture < 40
-              ? "Soil moisture is low — water your plant well."
-              : "Your plant looks healthy! Keep it in bright, indirect light."}
-          </Text>
-        </View>
 
-        {/* OPTIMAL CONDITIONS */}
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <Text style={styles.cardTitle}>Optimal Conditions</Text>
-          <Text style={styles.row}>• Moisture: 50–70%</Text>
-          <Text style={styles.row}>• Light: 500–2000 lux</Text>
-          <Text style={styles.row}>• Temperature: 18–24°C</Text>
-          <Text style={styles.row}>• Humidity: 40–60%</Text>
+          {advice ? (
+            <>
+              <Text style={styles.cardText}>
+                <Text style={{ fontFamily: fonts.sansSemi }}>Overall: </Text>
+                {advice.overall}
+              </Text>
+
+              <Text style={styles.row}>• Water: {advice.water}</Text>
+              <Text style={styles.row}>• Light: {advice.light}</Text>
+              <Text style={styles.row}>• Temperature: {advice.temperature}</Text>
+            </>
+          ) : (
+            <Text style={styles.cardText}>
+              No care profile found for this plant.
+            </Text>
+          )}
         </View>
 
         <TouchableOpacity
@@ -230,10 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.text,
     fontFamily: fonts.display,
-  },
-  errorText: {
-    marginTop: 8,
-    color: colors.textMuted,
   },
   errorButton: {
     marginTop: 18,

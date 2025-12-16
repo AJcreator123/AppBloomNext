@@ -1,7 +1,7 @@
 // src/data/speciesModel.ts
-import { Plant } from "../types/Plant";
+import { PlantSpecies } from "../types/PlantSpecies";
 
-export const speciesModel: Record<string, Plant> = {
+export const speciesModel: Record<string, PlantSpecies> = {
   "monstera-deliciosa": {
     id: "monstera-deliciosa",
     commonName: "Monstera Deliciosa",

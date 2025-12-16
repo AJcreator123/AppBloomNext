@@ -12,9 +12,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
-import { usePlants } from "../context/PlantsContext";   // ⭐ import context
+import { usePlants } from "../context/PlantsContext";
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
 
@@ -41,7 +41,10 @@ export default function ProfileScreen() {
 
   return (
     <Animated.View
-      style={[s.container, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
+      style={[
+        s.container,
+        { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+      ]}
     >
       {/* Avatar */}
       <Image
@@ -58,8 +61,6 @@ export default function ProfileScreen() {
         <View style={s.statCard}>
           <Ionicons name="leaf-outline" size={22} color={colors.accent} />
           <Text style={s.statLabel}>Plants</Text>
-
-          {/* ⭐ Auto-updates when a plant is added */}
           <Text style={s.statValue}>{plantCount}</Text>
         </View>
 
@@ -80,6 +81,15 @@ export default function ProfileScreen() {
       <View style={s.section}>
         <Text style={s.sectionTitle}>Settings</Text>
 
+        {/* ✅ NEW: Choose Plant */}
+        <TouchableOpacity
+          style={s.option}
+          onPress={() => navigation.navigate("PlantPicker")}
+        >
+          <Ionicons name="leaf-outline" size={20} color={colors.text} />
+          <Text style={s.optionText}>Choose Plant</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={s.option}>
           <Ionicons name="brush-outline" size={20} color={colors.text} />
           <Text style={s.optionText}>Appearance</Text>
@@ -91,7 +101,11 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={s.option}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={colors.text} />
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={20}
+            color={colors.text}
+          />
           <Text style={s.optionText}>Privacy</Text>
         </TouchableOpacity>
       </View>
