@@ -84,7 +84,7 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    paddingTop: 40,
+    paddingTop: 60,   // more spacing here for top clarity
     paddingHorizontal: 18,
   },
 
@@ -92,7 +92,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 22,
+    marginBottom: 26,
   },
 
   subtitle: {
@@ -100,12 +100,14 @@ const s = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
   },
+
   title: {
     fontFamily: fonts.display,
-    fontSize: 30,
+    fontSize: 32,
     color: colors.text,
     marginTop: 2,
   },
+
   count: {
     fontFamily: fonts.sans,
     color: colors.textMuted,
@@ -119,6 +121,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
   },
+
   addButtonText: {
     color: "white",
     fontFamily: fonts.sansSemi,
@@ -127,17 +130,14 @@ const s = StyleSheet.create({
 
   card: {
     width: CARD_WIDTH,
-    backgroundColor: colors.card,
+    backgroundColor: "#121820",       // DARK card background
     borderRadius: 18,
     overflow: "hidden",
-    borderColor: colors.line,
-    borderWidth: 1,
+
+    // remove light outline & shadow
+    borderWidth: 0,
+    elevation: 0,
     marginBottom: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
 
   image: {
@@ -148,15 +148,17 @@ const s = StyleSheet.create({
   cardInfo: {
     padding: 12,
   },
+
   cardName: {
     fontFamily: fonts.sansSemi,
-    color: colors.text,
+    color: "#FFFFFF",
     fontSize: 16,
     marginBottom: 2,
   },
+
   cardSpecies: {
     fontFamily: fonts.sans,
-    color: colors.textMuted,
+    color: "#9CA3AF",
     fontSize: 12,
   },
 });

@@ -14,8 +14,6 @@ import AddPlantScreen from "../screens/AddPlantScreen";
 import PairBloomPotScreen from "../screens/PairBloomPotScreen";
 import PlantPickerScreen from "../screens/PlantPickerScreen";
 
-import colors from "../theme/colors";
-
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -26,29 +24,47 @@ function Tabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
 
+        // REAL floating tab bar design:
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.line,
-          height: 94,
-          paddingTop: 18,
-          paddingBottom: 20,
-          marginBottom: 14,
+          position: "absolute",
+          bottom: 24,
+          left: 24,
+          right: 24,
+          height: 70,
+          borderRadius: 28,
+
+          backgroundColor: "#111827",          // << THIS WILL SHOW IMMEDIATELY
+
+          borderTopWidth: 0,
+          elevation: 10,
+
+          shadowColor: "#000",
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
         },
 
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: "#22C55E",
+        tabBarInactiveTintColor: "#A8A8A8",
 
-        tabBarIcon: ({ color }) => {
-          let icon = "leaf-outline";
-          if (route.name === "Plants") icon = "flower-outline";
+        tabBarIcon: ({ color, focused }) => {
+          let icon = "flower-outline";
           if (route.name === "Care") icon = "heart-outline";
           if (route.name === "Profile") icon = "person-outline";
-          return <Ionicons name={icon as any} size={28} color={color} />;
+
+          return (
+            <Ionicons
+              name={icon}
+              size={focused ? 30 : 24}       // bigger active icon
+              color={color}
+              style={{ marginTop: 6 }}
+            />
+          );
         },
 
         tabBarLabelStyle: {
-          marginTop: -6,
-          fontSize: 12,
+          fontSize: 11,
+          marginBottom: 6,
         },
       })}
     >
@@ -63,7 +79,7 @@ const navTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: colors.bg,
+    background: "#000", // optional
   },
 };
 
@@ -72,41 +88,13 @@ export default function AppNavigator() {
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator>
 
-        <Stack.Screen
-          name="Root"
-          component={Tabs}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Root" component={Tabs} options={{ headerShown: false }} />
 
-        <Stack.Screen
-          name="PlantDetail"
-          component={PlantDetailScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="History"
-          component={HistoryScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="AddPlant"
-          component={AddPlantScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="PairBloomPotScreen"
-          component={PairBloomPotScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Stack.Screen
-          name="PlantPicker"
-          component={PlantPickerScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="PlantDetail" component={PlantDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AddPlant" component={AddPlantScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PairBloomPotScreen" component={PairBloomPotScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PlantPicker" component={PlantPickerScreen} options={{ headerShown: false }} />
 
       </Stack.Navigator>
     </NavigationContainer>

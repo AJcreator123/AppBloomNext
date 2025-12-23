@@ -1,4 +1,3 @@
-// src/screens/HomeScreen.tsx
 import React, { useCallback } from "react";
 import {
   View,
@@ -15,16 +14,14 @@ import StatusCard from "../components/StatusCard";
 import { useRealtimeReadings } from "../hooks/useRealtimeReadings";
 import { useReadingsStore } from "../store/readingsStore";
 import { fetchLatestReading } from "../api/pots";
-
 import { usePlants } from "../context/PlantsContext";
 
 const HomeScreen: React.FC = ({ navigation }: any) => {
   const { plants } = usePlants();
 
-  // ⭐ Active plant (first plant)
-  const activePlant = plants && plants.length > 0 ? plants[0] : null;
+  const activePlant =
+    plants && plants.length > 0 ? plants[0] : null;
 
-  // ⭐ Realtime readings using plantId
   useRealtimeReadings(activePlant?.supabasePlantId ?? null);
 
   const reading = useReadingsStore((s) => s.reading);
@@ -39,17 +36,14 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
       const latest = await fetchLatestReading(activePlant?.supabasePlantId);
       if (latest) setReading(latest);
     } catch (err) {
-      console.error("Refresh error:", err);
+      console.error(err);
     }
     setRefreshing(false);
   }, [setReading, activePlant]);
 
-  // ------------------------------
-  // EMPTY STATE
-  // ------------------------------
   if (!activePlant) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: "#0B0F12" }]}>
         <Text style={styles.emptyText}>No plants added yet</Text>
 
         <TouchableOpacity
@@ -62,9 +56,6 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
     );
   }
 
-  // ------------------------------
-  // FALLBACKS
-  // ------------------------------
   const v = activePlant.vitals || {};
 
   const temperature = reading?.temperature ?? v.temp ?? 24;
@@ -78,31 +69,33 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
       ? new Date(reading.created_at).toLocaleTimeString()
       : "Just now";
 
-  // ------------------------------
-  // MAIN UI
-  // ------------------------------
   return (
     <View style={styles.container}>
-      {/* HEADER */}
+
       <View style={styles.header}>
         <View>
           <Text style={styles.appTitle}>Bloom</Text>
           <Text style={styles.subtitle}>Smart Plant Care</Text>
         </View>
+
         <View style={styles.avatar}>
           <Ionicons name="leaf" size={20} color="#22C55E" />
         </View>
       </View>
 
-      {/* ACTIVE PLANT CARD */}
       <View style={styles.potCard}>
         <View style={{ flex: 1 }}>
-          {/* ⭐ BOLDER NAME FOR VISIBILITY */}
-          <Text style={styles.potTitle}>{activePlant.name}</Text>
 
-          <Text style={styles.potSubtitle}>{activePlant.species}</Text>
+          <Text style={styles.potTitle}>
+            {activePlant.name}
+          </Text>
+
+          <Text style={styles.potSubtitle}>
+            {activePlant.species}
+          </Text>
 
           <View style={styles.chipRow}>
+
             <View style={styles.stateChip}>
               <View style={styles.stateDot} />
               <Text style={styles.stateText}>
@@ -116,11 +109,13 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
               </Text>
             </View>
 
-            <Text style={styles.updatedText}>Updated {lastUpdated}</Text>
+            <Text style={styles.updatedText}>
+              Updated {lastUpdated}
+            </Text>
+
           </View>
         </View>
 
-        {/* Plant Image */}
         <View style={styles.imageWrapper}>
           <Image
             source={{ uri: activePlant.image }}
@@ -130,7 +125,6 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
         </View>
       </View>
 
-      {/* ERRORS */}
       {error && (
         <View style={styles.errorCard}>
           <Ionicons name="warning" size={20} color="#EF4444" />
@@ -138,7 +132,6 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
         </View>
       )}
 
-      {/* LIVE VITALS */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -152,60 +145,28 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
           label="Temperature"
           value={Number(temperature).toFixed(1)}
           unit="°C"
-          status={
-            temperature >= 18 && temperature <= 28
-              ? "optimal"
-              : temperature < 15
-              ? "critical"
-              : "warning"
-          }
           iconName="thermometer-outline"
-          helperText="Most tropical houseplants love 18–28°C."
         />
 
         <StatusCard
           label="Humidity"
           value={Number(humidity).toFixed(0)}
           unit="%"
-          status={
-            humidity >= 50 && humidity <= 70
-              ? "optimal"
-              : humidity < 35
-              ? "warning"
-              : "info"
-          }
           iconName="water-outline"
-          helperText="Monstera prefers 50–70% humidity."
         />
 
         <StatusCard
           label="Soil Moisture"
           value={Number(moisture).toFixed(0)}
           unit="%"
-          status={
-            moisture >= 60 && moisture <= 80
-              ? "optimal"
-              : moisture < 35
-              ? "warning"
-              : "info"
-          }
           iconName="beaker-outline"
-          helperText="Water when moisture drops below ~40–50%."
         />
 
         <StatusCard
           label="Light Level"
           value={Number(light).toFixed(0)}
           unit="lux"
-          status={
-            light >= 500 && light <= 2000
-              ? "optimal"
-              : light < 200
-              ? "warning"
-              : "info"
-          }
           iconName="sunny-outline"
-          helperText="Bright, indirect light keeps Monstera happiest."
         />
       </ScrollView>
     </View>
@@ -215,85 +176,71 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F7",
+
+    // FULL DARK BACKGROUND
+    backgroundColor: "rgba(167, 49, 116, 1)",
+
     paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 18,
-    marginBottom: 16,
-  },
-  addButton: {
-    backgroundColor: "#22C55E",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  addButtonText: {
-    color: "white",
-    fontWeight: "700",
+    paddingTop: 60,
   },
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+
+    marginBottom: 20,
   },
+
   appTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
-    color: "#020617",
+    color: "#FFFFFF",
   },
+
   subtitle: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 2,
   },
+
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 999,
-    backgroundColor: "#ECFDF3",
+
+    backgroundColor: "#122027",
+
     justifyContent: "center",
     alignItems: "center",
   },
 
   potCard: {
-    backgroundColor: "#111827",
+    backgroundColor: "#121820",
     borderRadius: 22,
     padding: 18,
 
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 18,
 
-    // ⭐ REMOVE GREY OUTLINE COMPLETELY
-    borderWidth: 0,
-    borderColor: "transparent",
+    marginBottom: 22,
 
-    // ⭐ OPTIONAL: NICE SHADOW
     shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
 
   potTitle: {
     fontSize: 20,
-    fontWeight: "800", // ⭐ bolder
-    color: "#F9FAFB",
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
+
   potSubtitle: {
     fontSize: 13,
-    color: "#CBD5E1",
+    color: "#9CA3AF",
     marginTop: 2,
   },
 
@@ -302,15 +249,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
+
   stateChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#022C22",
+    backgroundColor: "#163032",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
     marginRight: 8,
   },
+
   stateDot: {
     width: 6,
     height: 6,
@@ -318,11 +267,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#22C55E",
     marginRight: 6,
   },
+
   stateText: {
     fontSize: 12,
     color: "#A7F3D0",
     fontWeight: "600",
   },
+
   updatedText: {
     fontSize: 12,
     color: "#9CA3AF",
@@ -332,10 +283,13 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 20,
+
     overflow: "hidden",
-    backgroundColor: "#1F2937",
+
+    backgroundColor: "#121820",
     marginLeft: 14,
   },
+
   plantImage: {
     width: "100%",
     height: "100%",
@@ -348,21 +302,35 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#020617",
+    color: "#FFFFFF",
     marginBottom: 12,
+  },
+
+  emptyText: {
+    color: "#fff",
+  },
+
+  addButton: {
+    backgroundColor: "#22C55E",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 18,
+  },
+
+  addButtonText: {
+    color: "#000",
+    fontWeight: "700",
   },
 
   errorCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
+    backgroundColor: "#442020",
     borderRadius: 8,
     padding: 12,
-    marginHorizontal: 16,
     marginBottom: 16,
   },
+
   errorText: {
     fontSize: 14,
     color: "#DC2626",
