@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useAuth } from "../context/AuthContext";
+
 import HomeScreen from "../screens/HomeScreen";
 import PlantsScreen from "../screens/PlantsScreen";
 import CareScreen from "../screens/CareScreen";
@@ -13,9 +15,12 @@ import HistoryScreen from "../screens/HistoryScreen";
 import AddPlantScreen from "../screens/AddPlantScreen";
 import PairBloomPotScreen from "../screens/PairBloomPotScreen";
 import PlantPickerScreen from "../screens/PlantPickerScreen";
+import AuthGate from "../screens/AuthGate";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+/* ================= TABS ================= */
 
 function Tabs() {
   return (
@@ -24,7 +29,6 @@ function Tabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
 
-        // REAL floating tab bar design:
         tabBarStyle: {
           position: "absolute",
           bottom: 24,
@@ -32,12 +36,9 @@ function Tabs() {
           right: 24,
           height: 70,
           borderRadius: 28,
-
-          backgroundColor: "#111827",          // << THIS WILL SHOW IMMEDIATELY
-
+          backgroundColor: "#111827",
           borderTopWidth: 0,
           elevation: 10,
-
           shadowColor: "#000",
           shadowOpacity: 0.2,
           shadowRadius: 8,
@@ -55,7 +56,7 @@ function Tabs() {
           return (
             <Ionicons
               name={icon}
-              size={focused ? 30 : 24}       // bigger active icon
+              size={focused ? 30 : 24}
               color={color}
               style={{ marginTop: 6 }}
             />
@@ -75,27 +76,44 @@ function Tabs() {
   );
 }
 
+/* ================= NAV THEME ================= */
+
 const navTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: "#000", // optional
+    background: "#000",
   },
 };
 
+/* ================= ROOT NAV ================= */
+
 export default function AppNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!user ? (
+          /* 🔐 AUTH FLOW */
+          <Stack.Screen name="Auth" component={AuthGate} />
+        ) : (
+          /* 🌱 MAIN APP */
+          <>
+            <Stack.Screen name="Root" component={Tabs} />
 
-        <Stack.Screen name="Root" component={Tabs} options={{ headerShown: false }} />
-
-        <Stack.Screen name="PlantDetail" component={PlantDetailScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="AddPlant" component={AddPlantScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="PairBloomPotScreen" component={PairBloomPotScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="PlantPicker" component={PlantPickerScreen} options={{ headerShown: false }} />
-
+            <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
+            <Stack.Screen name="History" component={HistoryScreen} />
+            <Stack.Screen name="AddPlant" component={AddPlantScreen} />
+            <Stack.Screen
+              name="PairBloomPotScreen"
+              component={PairBloomPotScreen}
+            />
+            <Stack.Screen name="PlantPicker" component={PlantPickerScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

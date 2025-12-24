@@ -7,10 +7,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import AppNavigator from './src/navigation/AppNavigator';
-import colors from './src/theme/colors';
 
-// 🌱 ADD THIS
 import { PlantsProvider } from './src/context/PlantsContext';
+import { ThemeProvider } from './src/context/ThemeContext';
+import { NotificationProvider } from './src/context/NotificationContext';
+import { AuthProvider } from './src/context/AuthContext';
+
+import { themes } from './src/theme/colors';
 
 import {
   useFonts as useInter,
@@ -18,6 +21,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+
 import {
   useFonts as usePlayfair,
   PlayfairDisplay_700Bold,
@@ -30,10 +34,13 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
   const [loadedPlayfair] = usePlayfair({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_700Bold_Italic,
   });
+
+  const colors = themes.light;
 
   if (!loadedInter || !loadedPlayfair) {
     return (
@@ -41,8 +48,8 @@ export default function App() {
         style={{
           flex: 1,
           backgroundColor: colors.bg,
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         <ActivityIndicator size="large" color={colors.primary} />
@@ -53,12 +60,15 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-
-        {/* 🌱 WRAP THE WHOLE APP IN THIS PROVIDER */}
-        <PlantsProvider>
-          <AppNavigator />
-        </PlantsProvider>
-
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <PlantsProvider>
+                <AppNavigator />
+              </PlantsProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

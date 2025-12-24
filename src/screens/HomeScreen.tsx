@@ -16,11 +16,16 @@ import { useReadingsStore } from "../store/readingsStore";
 import { fetchLatestReading } from "../api/pots";
 import { usePlants } from "../context/PlantsContext";
 
-const HomeScreen: React.FC = ({ navigation }: any) => {
-  const { plants } = usePlants();
+import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
 
-  const activePlant =
-    plants && plants.length > 0 ? plants[0] : null;
+const HomeScreen: React.FC = ({ navigation }: any) => {
+  const { mode } = useThemeMode();
+  const colors = themes[mode];
+
+  const { plants } = usePlants();
+  const activePlant = plants && plants.length > 0 ? plants[0] : null;
 
   useRealtimeReadings(activePlant?.supabasePlantId ?? null);
 
@@ -33,7 +38,9 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const latest = await fetchLatestReading(activePlant?.supabasePlantId);
+      const latest = await fetchLatestReading(
+        activePlant?.supabasePlantId
+      );
       if (latest) setReading(latest);
     } catch (err) {
       console.error(err);
@@ -43,14 +50,26 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
 
   if (!activePlant) {
     return (
-      <View style={[styles.centered, { backgroundColor: "#0B0F12" }]}>
-        <Text style={styles.emptyText}>No plants added yet</Text>
+      <View
+        style={[
+          s.centered,
+          { backgroundColor: colors.bg },
+        ]}
+      >
+        <Text style={[s.emptyText, { color: colors.text }]}>
+          No plants added yet
+        </Text>
 
         <TouchableOpacity
-          style={styles.addButton}
+          style={[
+            s.addButton,
+            { backgroundColor: colors.primary + "CC" },
+          ]}
           onPress={() => navigation.navigate("AddPlant")}
         >
-          <Text style={styles.addButtonText}>Add your first plant</Text>
+          <Text style={s.addButtonText}>
+            Add your first plant
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -64,82 +83,167 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
   const light = reading?.light ?? v.light ?? 800;
   const flowerState = reading?.flower_state ?? 2;
 
-  const lastUpdated =
-    reading?.created_at
-      ? new Date(reading.created_at).toLocaleTimeString()
-      : "Just now";
+  const lastUpdated = reading?.created_at
+    ? new Date(reading.created_at).toLocaleTimeString()
+    : "Just now";
+
+  const stateLabel =
+    flowerState === 3
+      ? "Happy"
+      : flowerState === 2
+      ? "Okay"
+      : flowerState === 1
+      ? "Needs water"
+      : "Stressed";
 
   return (
-    <View style={styles.container}>
-
-      <View style={styles.header}>
+    <View style={[s.container, { backgroundColor: colors.bg }]}>
+      {/* HEADER */}
+      <View style={s.header}>
         <View>
-          <Text style={styles.appTitle}>Bloom</Text>
-          <Text style={styles.subtitle}>Smart Plant Care</Text>
+          <Text style={[s.appTitle, { color: colors.text }]}>
+            Bloom
+          </Text>
+          <Text
+            style={[
+              s.subtitle,
+              { color: colors.textMuted },
+            ]}
+          >
+            Smart Plant Care
+          </Text>
         </View>
 
-        <View style={styles.avatar}>
-          <Ionicons name="leaf" size={20} color="#22C55E" />
+        <View
+          style={[
+            s.avatar,
+            { backgroundColor: colors.card },
+          ]}
+        >
+          <Ionicons
+            name="leaf"
+            size={20}
+            color={colors.primary}
+          />
         </View>
       </View>
 
-      <View style={styles.potCard}>
+      {/* PLANT CARD */}
+      <View
+        style={[
+          s.potCard,
+          { backgroundColor: colors.card },
+        ]}
+      >
         <View style={{ flex: 1 }}>
-
-          <Text style={styles.potTitle}>
+          <Text
+            style={[
+              s.potTitle,
+              { color: colors.text },
+            ]}
+          >
             {activePlant.name}
           </Text>
 
-          <Text style={styles.potSubtitle}>
+          <Text
+            style={[
+              s.potSubtitle,
+              { color: colors.textMuted },
+            ]}
+          >
             {activePlant.species}
           </Text>
 
-          <View style={styles.chipRow}>
-
-            <View style={styles.stateChip}>
-              <View style={styles.stateDot} />
-              <Text style={styles.stateText}>
-                {flowerState === 3
-                  ? "Happy"
-                  : flowerState === 2
-                  ? "Okay"
-                  : flowerState === 1
-                  ? "Needs water"
-                  : "Stressed"}
+          <View style={s.chipRow}>
+            <View
+              style={[
+                s.stateChip,
+                { backgroundColor: colors.panel },
+              ]}
+            >
+              <View
+                style={[
+                  s.stateDot,
+                  { backgroundColor: colors.primary },
+                ]}
+              />
+              <Text
+                style={[
+                  s.stateText,
+                  { color: colors.primary },
+                ]}
+              >
+                {stateLabel}
               </Text>
             </View>
 
-            <Text style={styles.updatedText}>
+            <Text
+              style={[
+                s.updatedText,
+                { color: colors.textMuted },
+              ]}
+            >
               Updated {lastUpdated}
             </Text>
-
           </View>
         </View>
 
-        <View style={styles.imageWrapper}>
+        <View
+          style={[
+            s.imageWrapper,
+            { backgroundColor: colors.panel },
+          ]}
+        >
           <Image
             source={{ uri: activePlant.image }}
-            style={styles.plantImage}
+            style={s.plantImage}
             resizeMode="cover"
           />
         </View>
       </View>
 
       {error && (
-        <View style={styles.errorCard}>
-          <Ionicons name="warning" size={20} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
+        <View
+          style={[
+            s.errorCard,
+            { backgroundColor: colors.panel },
+          ]}
+        >
+          <Ionicons
+            name="warning"
+            size={20}
+            color="#EF4444"
+          />
+          <Text
+            style={[
+              s.errorText,
+              { color: "#EF4444" },
+            ]}
+          >
+            {error}
+          </Text>
         </View>
       )}
 
       <ScrollView
-        style={styles.scroll}
+        style={s.scroll}
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
         }
       >
-        <Text style={styles.sectionTitle}>Live Vitals</Text>
+        <Text
+          style={[
+            s.sectionTitle,
+            { color: colors.text },
+          ]}
+        >
+          Live Vitals
+        </Text>
 
         <StatusCard
           label="Temperature"
@@ -173,34 +277,36 @@ const HomeScreen: React.FC = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+/* ================= STYLES ================= */
+
+const s = StyleSheet.create({
   container: {
     flex: 1,
-
-    // FULL DARK BACKGROUND
-    backgroundColor: "rgba(167, 49, 116, 1)",
-
     paddingHorizontal: 16,
     paddingTop: 60,
+  },
+
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-
     marginBottom: 20,
   },
 
   appTitle: {
+    fontFamily: fonts.display,
     fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
   },
 
   subtitle: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: "#6B7280",
     marginTop: 2,
   },
 
@@ -208,39 +314,27 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 999,
-
-    backgroundColor: "#122027",
-
     justifyContent: "center",
     alignItems: "center",
   },
 
   potCard: {
-    backgroundColor: "#121820",
     borderRadius: 22,
     padding: 18,
-
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-
     marginBottom: 22,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
   },
 
   potTitle: {
+    fontFamily: fonts.sansSemi,
     fontSize: 20,
-    fontWeight: "800",
-    color: "#FFFFFF",
   },
 
   potSubtitle: {
+    fontFamily: fonts.sans,
     fontSize: 13,
-    color: "#9CA3AF",
     marginTop: 2,
   },
 
@@ -253,7 +347,6 @@ const styles = StyleSheet.create({
   stateChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#163032",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -264,29 +357,23 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#22C55E",
     marginRight: 6,
   },
 
   stateText: {
     fontSize: 12,
-    color: "#A7F3D0",
-    fontWeight: "600",
+    fontFamily: fonts.sansSemi,
   },
 
   updatedText: {
     fontSize: 12,
-    color: "#9CA3AF",
   },
 
   imageWrapper: {
     width: 70,
     height: 70,
     borderRadius: 20,
-
     overflow: "hidden",
-
-    backgroundColor: "#121820",
     marginLeft: 14,
   },
 
@@ -300,32 +387,31 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
+    fontFamily: fonts.sansSemi,
     fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
     marginBottom: 12,
   },
 
   emptyText: {
-    color: "#fff",
+    fontFamily: fonts.sans,
+    fontSize: 16,
+    marginBottom: 14,
   },
 
   addButton: {
-    backgroundColor: "#22C55E",
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 18,
   },
 
   addButtonText: {
-    color: "#000",
-    fontWeight: "700",
+    color: "#fff",
+    fontFamily: fonts.sansSemi,
   },
 
   errorCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#442020",
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -333,7 +419,6 @@ const styles = StyleSheet.create({
 
   errorText: {
     fontSize: 14,
-    color: "#DC2626",
     marginLeft: 8,
     flex: 1,
   },

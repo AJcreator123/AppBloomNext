@@ -14,13 +14,13 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
-import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
 import { usePlants } from "../context/PlantsContext";
 
 import {
   scanForPots,
-  connectToDevice,
   writePassword,
   listenForResponse,
   SERVICE_UUID,
@@ -34,6 +34,9 @@ import {
 } from "../ble/uuids";
 
 export default function PairBloomPotScreen({ navigation, route }: any) {
+  const { mode } = useThemeMode();
+  const colors = themes[mode];
+
   const { addPlant } = usePlants();
 
   const userName = route.params?.name ?? "";
@@ -59,7 +62,15 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
 
       setPots((prev) => {
         if (prev.find((p) => p.id === device.id)) return prev;
-        return [...prev, { id: device.id, name, macAddress: device.id, plant_id: 1 }];
+        return [
+          ...prev,
+          {
+            id: device.id,
+            name,
+            macAddress: device.id,
+            plant_id: 1,
+          },
+        ];
       });
     });
 
@@ -70,7 +81,7 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
   };
 
   const savePlant = () => {
-    const newPlant = {
+    addPlant({
       name: userName.trim(),
       species: userSpecies.trim(),
       image:
@@ -79,9 +90,7 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
       supabasePlantId: selected.plant_id,
       potMacAddress: selected.macAddress,
       vitals: { temp: 24, humidity: 50, moisture: 40, light: 900 },
-    };
-
-    addPlant(newPlant);
+    });
 
     navigation.reset({
       index: 0,
@@ -91,7 +100,8 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
 
   const onPair = async () => {
     if (!selected) return Alert.alert("Select Pot", "Choose a BloomPot first.");
-    if (!wifiSsid.trim()) return Alert.alert("WiFi Required", "Enter your WiFi network.");
+    if (!wifiSsid.trim())
+      return Alert.alert("WiFi Required", "Enter your WiFi network.");
 
     try {
       const deviceId = selected.id;
@@ -126,16 +136,17 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
         }}
         ListHeaderComponent={
           <>
-
-            {/* GREEN HEADER */}
-            <View style={s.headerBackground}>
-
-              {/* Step moved ABOVE heading */}
+            {/* HEADER */}
+            <View
+              style={[
+                s.headerBackground,
+                { backgroundColor: colors.primary + "CC" },
+              ]}
+            >
               <View style={s.stepCardTop}>
                 <Text style={s.stepInline}>Step 2 of 2 • Pair Hardware</Text>
               </View>
 
-              {/* Back Button */}
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={s.backButton}
@@ -143,38 +154,65 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
                 <Ionicons name="chevron-back" size={30} color="white" />
               </TouchableOpacity>
 
-              {/* Title */}
               <Text style={s.title}>Pair BloomPot</Text>
-
               <Text style={s.subtitle}>
                 Connect this device to finish setup.
               </Text>
-
             </View>
 
             <View style={{ height: 26 }} />
 
-            {/* Plant Card */}
-            <View style={s.plantCard}>
-              <Image
-                source={{ uri: userImage }}
-                style={s.plantImage}
-              />
+            {/* PLANT CARD */}
+            <View
+              style={[
+                s.plantCard,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.line,
+                },
+              ]}
+            >
+              <Image source={{ uri: userImage }} style={s.plantImage} />
 
               <View style={{ marginLeft: 14 }}>
-                <Text style={s.plantName}>{userName}</Text>
-                <Text style={s.plantSpecies}>{userSpecies}</Text>
+                <Text style={[s.plantName, { color: colors.text }]}>
+                  {userName}
+                </Text>
+                <Text
+                  style={[
+                    s.plantSpecies,
+                    { color: colors.textMuted },
+                  ]}
+                >
+                  {userSpecies}
+                </Text>
               </View>
             </View>
 
             <View style={{ height: 30 }} />
 
-            {/* Scan Block */}
-            <View style={s.scanBlock}>
-              <Text style={s.blockTitle}>Nearby BloomPots</Text>
+            {/* SCAN */}
+            <View
+              style={[
+                s.scanBlock,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.line,
+                },
+              ]}
+            >
+              <Text style={[s.blockTitle, { color: colors.text }]}>
+                Nearby BloomPots
+              </Text>
 
               <TouchableOpacity
-                style={[s.scanBtn, isScanning && { opacity: 0.6 }]}
+                style={[
+                  s.scanBtn,
+                  {
+                    backgroundColor: colors.primary + "CC",
+                    opacity: isScanning ? 0.6 : 1,
+                  },
+                ]}
                 onPress={startScan}
                 disabled={isScanning}
               >
@@ -185,33 +223,58 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
               </TouchableOpacity>
 
               {pots.length === 0 && !isScanning && (
-                <Text style={s.emptyMsg}>No devices found yet</Text>
+                <Text
+                  style={[
+                    s.emptyMsg,
+                    { color: colors.textMuted },
+                  ]}
+                >
+                  No devices found yet
+                </Text>
               )}
             </View>
 
             <View style={{ height: 22 }} />
-
           </>
         }
-
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => setSelected(item)}
             style={[
               s.deviceTile,
-              selected?.id === item.id && s.deviceTileSelected,
+              {
+                backgroundColor: colors.card,
+                borderColor:
+                  selected?.id === item.id
+                    ? colors.primary
+                    : colors.line,
+                borderWidth: selected?.id === item.id ? 2 : 1,
+              },
             ]}
           >
             <Ionicons
               name="cube-outline"
               size={24}
-              color={selected?.id === item.id ? colors.primary : colors.text}
+              color={
+                selected?.id === item.id
+                  ? colors.primary
+                  : colors.textMuted
+              }
               style={{ marginRight: 10 }}
             />
 
             <View style={{ flex: 1 }}>
-              <Text style={s.deviceName}>{item.name}</Text>
-              <Text style={s.deviceMac}>{item.macAddress}</Text>
+              <Text style={[s.deviceName, { color: colors.text }]}>
+                {item.name}
+              </Text>
+              <Text
+                style={[
+                  s.deviceMac,
+                  { color: colors.textMuted },
+                ]}
+              >
+                {item.macAddress}
+              </Text>
             </View>
 
             {selected?.id === item.id && (
@@ -223,39 +286,70 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
             )}
           </TouchableOpacity>
         )}
-
         ListFooterComponent={
           selected && (
             <>
               <View style={{ height: 35 }} />
 
-              <View style={s.scanBlock}>
+              <View
+                style={[
+                  s.scanBlock,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.line,
+                  },
+                ]}
+              >
+                <Text style={[s.blockTitle, { color: colors.text }]}>
+                  WiFi Credentials
+                </Text>
 
-                <Text style={s.blockTitle}>WiFi Credentials</Text>
-
-                <Text style={s.label}>WiFi Name</Text>
+                <Text style={[s.label, { color: colors.text }]}>
+                  WiFi Name
+                </Text>
                 <TextInput
-                  style={s.input}
+                  style={[
+                    s.input,
+                    {
+                      backgroundColor: colors.panel,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                   value={wifiSsid}
                   onChangeText={setWifiSsid}
                   placeholder="Home WiFi network"
                   placeholderTextColor={colors.textMuted}
                 />
 
-                <Text style={s.label}>Password</Text>
+                <Text style={[s.label, { color: colors.text }]}>
+                  Password
+                </Text>
                 <TextInput
                   secureTextEntry
-                  style={s.input}
+                  style={[
+                    s.input,
+                    {
+                      backgroundColor: colors.panel,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                   value={wifiPassword}
                   onChangeText={setWifiPassword}
                   placeholder="Password"
                   placeholderTextColor={colors.textMuted}
                 />
 
-                <TouchableOpacity style={s.pairBtn} onPress={onPair}>
+                <TouchableOpacity
+                  style={[
+                    s.pairBtn,
+                    { backgroundColor: colors.primary + "CC" },
+                  ]}
+                  onPress={onPair}
+                >
                   <Text style={s.pairBtnText}>Pair & Save Plant</Text>
                 </TouchableOpacity>
-
               </View>
 
               <View style={{ height: 80 }} />
@@ -267,10 +361,10 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
   );
 }
 
-const s = StyleSheet.create({
+/* ================= STYLES ================= */
 
+const s = StyleSheet.create({
   headerBackground: {
-    backgroundColor: colors.primary,
     paddingTop: 85,
     paddingBottom: 40,
     borderBottomLeftRadius: 40,
@@ -284,7 +378,6 @@ const s = StyleSheet.create({
     left: 18,
   },
 
-  /* Step indicator moved above title */
   stepCardTop: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(255,255,255,0.15)",
@@ -315,13 +408,10 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
 
-  /* Plant card */
   plantCard: {
-    backgroundColor: colors.card,
     padding: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.line,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -330,40 +420,33 @@ const s = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 15,
-    backgroundColor: "#0e0e0e",
+    backgroundColor: "#000",
   },
 
   plantName: {
     fontFamily: fonts.sansSemi,
-    color: colors.text,
     fontSize: 18,
   },
 
   plantSpecies: {
     fontFamily: fonts.sans,
-    color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
   },
 
-  /* Scan section */
   scanBlock: {
-    backgroundColor: colors.card,
     padding: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.line,
   },
 
   blockTitle: {
     fontFamily: fonts.sansSemi,
     fontSize: 18,
-    color: colors.text,
     marginBottom: 16,
   },
 
   scanBtn: {
-    backgroundColor: colors.primary,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -381,64 +464,46 @@ const s = StyleSheet.create({
 
   emptyMsg: {
     textAlign: "center",
-    color: colors.textMuted,
     fontFamily: fonts.sans,
     fontSize: 13,
   },
 
-  /* Devices list */
   deviceTile: {
-    backgroundColor: colors.card,
     padding: 18,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.line,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
   },
 
-  deviceTileSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-
   deviceName: {
     fontFamily: fonts.sansSemi,
     fontSize: 16,
-    color: colors.text,
   },
 
   deviceMac: {
     marginTop: 3,
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.textMuted,
   },
 
-  /* WiFi form */
   label: {
     fontFamily: fonts.sansSemi,
     fontSize: 15,
-    color: colors.text,
     marginTop: 14,
   },
 
   input: {
-    backgroundColor: colors.panel,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: colors.text,
     fontFamily: fonts.sans,
     marginTop: 8,
   },
 
   pairBtn: {
     marginTop: 26,
-    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 26,
     alignItems: "center",

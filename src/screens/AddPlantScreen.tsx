@@ -1,6 +1,6 @@
 // src/screens/AddPlantScreen.tsx
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,79 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  SafeAreaView,
+  Image,
 } from "react-native";
 
 import ModalSelector from "react-native-modal-selector";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
-import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
 import speciesList from "../data/speciesList";
 
+type SortMode = "default" | "az" | "za";
+
 export default function AddPlantScreen({ navigation }: any) {
+  const { mode } = useThemeMode();
+  const colors = themes[mode];
+
   const [name, setName] = useState("");
   const [species, setSpecies] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
+
+  // ✅ IMAGE PICKER STATE
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  // dropdown-only state
+  const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+
+  const filteredSpecies = useMemo(() => {
+    let list = [...speciesList];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((s) =>
+        s.label.toLowerCase().includes(q)
+      );
+    }
+
+    if (sortMode === "az") {
+      list.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    if (sortMode === "za") {
+      list.sort((a, b) => b.label.localeCompare(a.label));
+    }
+
+    return list;
+  }, [search, sortMode]);
+
+  /* ================= IMAGE PICKER ================= */
+
+  const pickImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permission required",
+        "Please allow photo access to choose a plant image."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
 
   const onNext = () => {
     if (!name.trim() || !species) {
@@ -31,21 +91,18 @@ export default function AddPlantScreen({ navigation }: any) {
     navigation.navigate("PairBloomPotScreen", {
       name: name.trim(),
       speciesCommonName: species,
-      imageUrl: imageUrl.trim(),
+      imageUri, // ✅ now passing picked image
     });
   };
 
   return (
-    <View style={s.container}>
-
+    <View style={s.container(colors)}>
       {/* TOP HEADER */}
-      <View style={s.topBanner}>
-
+      <View style={s.topBanner(colors)}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
           <Ionicons name="chevron-back" size={28} color="#fff" />
         </TouchableOpacity>
 
-        {/* STEP CARD — ONE LINE */}
         <View style={s.stepCard}>
           <Text style={s.stepInlineText}>
             Step 1 of 2 • Plant Details
@@ -58,15 +115,14 @@ export default function AddPlantScreen({ navigation }: any) {
         </Text>
       </View>
 
-      {/* CONTENT AREA */}
-      <View style={s.whiteArea}>
+      {/* CONTENT */}
+      <View style={s.contentArea}>
+        <Text style={s.sectionTitle(colors)}>Plant Details</Text>
 
-        <Text style={s.sectionTitle}>Plant Details</Text>
-
-        <View style={s.fieldBox}>
+        <View style={s.fieldBox(colors)}>
           <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
           <TextInput
-            style={s.input}
+            style={s.input(colors)}
             placeholder="Plant name (e.g. Freya)"
             placeholderTextColor={colors.textMuted}
             value={name}
@@ -74,68 +130,166 @@ export default function AddPlantScreen({ navigation }: any) {
           />
         </View>
 
-        <View style={s.fieldBox}>
+        {/* SPECIES SELECTOR (UNCHANGED UI) */}
+        <View style={s.fieldBox(colors)}>
           <Ionicons name="flower-outline" size={20} color={colors.primary} />
 
           <ModalSelector
-            data={speciesList}
-            initValue={species || "Select species"}
+            data={filteredSpecies}
+            onModalOpen={() => {
+              setSearch("");
+              setSortMode("default");
+            }}
             onChange={(option) => setSpecies(option.key)}
-            selectTextStyle={s.selectorText}
-            optionTextStyle={s.selectorOption}
-            optionContainerStyle={s.selectorOptionContainer}
-            style={{ flex: 1 }}
+            overlayStyle={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+            optionContainerStyle={{
+              backgroundColor: colors.card,
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              maxHeight: "80%",
+            }}
+            header={
+              <SafeAreaView
+                style={{
+                  padding: 14,
+                  borderBottomWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                }}
+              >
+                <View
+                  style={[
+                    s.searchRow,
+                    {
+                      backgroundColor: colors.panel,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                  <TextInput
+                    style={[s.searchInput, { color: colors.text }]}
+                    placeholder="Search species"
+                    placeholderTextColor={colors.textMuted}
+                    value={search}
+                    onChangeText={setSearch}
+                  />
+                </View>
+
+                <View style={s.sortRow}>
+                  <SortChip
+                    label="A–Z"
+                    active={sortMode === "az"}
+                    onPress={() => setSortMode("az")}
+                    colors={colors}
+                  />
+                  <SortChip
+                    label="Z–A"
+                    active={sortMode === "za"}
+                    onPress={() => setSortMode("za")}
+                    colors={colors}
+                  />
+                </View>
+              </SafeAreaView>
+            }
           >
             <View>
-              <Text style={species ? s.selectorSelected : s.selectorPlaceholder}>
+              <Text
+                style={
+                  species
+                    ? s.selectorSelected(colors)
+                    : s.selectorPlaceholder(colors)
+                }
+              >
                 {species || "Select species"}
               </Text>
             </View>
           </ModalSelector>
         </View>
 
-        <Text style={s.sectionTitle}>Image (Optional)</Text>
+        {/* ✅ IMAGE PICKER (REPLACES IMAGE URL) */}
+        <Text style={s.sectionTitle(colors)}>Plant Image (Optional)</Text>
 
-        <View style={s.fieldBox}>
-          <Ionicons name="image-outline" size={20} color={colors.primary} />
-          <TextInput
-            style={s.input}
-            placeholder="Paste plant image link"
-            placeholderTextColor={colors.textMuted}
-            value={imageUrl}
-            onChangeText={setImageUrl}
-          />
-        </View>
+        <TouchableOpacity
+          style={s.imagePickerBox(colors)}
+          onPress={pickImage}
+        >
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={s.previewImage} />
+          ) : (
+            <>
+              <Ionicons
+                name="image-outline"
+                size={22}
+                color={colors.textMuted}
+              />
+              <Text style={s.imagePickerText(colors)}>
+                Pick image from gallery
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-        <TouchableOpacity style={s.nextButton} onPress={onNext}>
+        <TouchableOpacity
+          style={[s.nextButton, { backgroundColor: colors.primary + "CC" }]}
+          onPress={onNext}
+        >
           <Text style={s.nextButtonText}>Next: Pair Bloom Pot</Text>
         </TouchableOpacity>
 
-        <Text style={s.note}>
-          You can upload your own image later from the Profile section.
-        </Text>
-
       </View>
-
     </View>
   );
 }
 
+/* ===== SORT CHIP ===== */
+
+function SortChip({ label, active, onPress, colors }: any) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: active ? colors.primary : colors.border,
+        marginRight: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: active ? colors.primary : colors.textMuted,
+          fontFamily: fonts.sansSemi,
+          fontSize: 13,
+        }}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/* ================= STYLES ================= */
+
 const s = StyleSheet.create({
-
-  container: {
+  container: (c: any) => ({
     flex: 1,
-    backgroundColor: colors.bg,
-  },
+    backgroundColor: c.bg,
+  }),
 
-  topBanner: {
+  topBanner: (c: any) => ({
     paddingTop: 80,
     paddingBottom: 36,
     paddingHorizontal: 22,
-    backgroundColor: colors.primary,
+    backgroundColor: c.primary + "CC",
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-  },
+  }),
 
   backBtn: {
     position: "absolute",
@@ -173,68 +327,96 @@ const s = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
   },
 
-  whiteArea: {
+  contentArea: {
     flex: 1,
     marginTop: 26,
     paddingHorizontal: 22,
   },
 
-  sectionTitle: {
+  sectionTitle: (c: any) => ({
     marginTop: 16,
     marginBottom: 6,
     fontFamily: fonts.sansSemi,
     fontSize: 15,
-    color: colors.text,
-  },
+    color: c.text,
+  }),
 
-  fieldBox: {
+  fieldBox: (c: any) => ({
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.panel,
+    backgroundColor: c.panel,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingVertical: 12,
     paddingHorizontal: 14,
     marginBottom: 14,
-  },
+  }),
 
-  input: {
+  input: (c: any) => ({
     flex: 1,
     marginLeft: 8,
     fontFamily: fonts.sans,
-    color: colors.text,
+    color: c.text,
     fontSize: 15,
-  },
+  }),
 
-  selectorPlaceholder: {
-    color: colors.textMuted,
+  selectorPlaceholder: (c: any) => ({
+    color: c.textMuted,
     fontFamily: fonts.sans,
     marginLeft: 6,
-  },
+  }),
 
-  selectorSelected: {
-    color: colors.text,
+  selectorSelected: (c: any) => ({
+    color: c.text,
     fontFamily: fonts.sansSemi,
     marginLeft: 6,
+  }),
+
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    marginBottom: 10,
   },
 
-  selectorText: { color: colors.text },
-
-  selectorOption: {
-    fontSize: 16,
-    padding: 12,
-    color: "#000",
+  searchInput: {
+    marginLeft: 8,
+    flex: 1,
+    fontFamily: fonts.sans,
   },
 
-  selectorOptionContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+  sortRow: {
+    flexDirection: "row",
+  },
+
+  imagePickerBox: (c: any) => ({
+    height: 140,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.panel,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 18,
+    overflow: "hidden",
+  }),
+
+  imagePickerText: (c: any) => ({
+    marginTop: 8,
+    fontFamily: fonts.sans,
+    color: c.textMuted,
+  }),
+
+  previewImage: {
+    width: "100%",
+    height: "100%",
   },
 
   nextButton: {
     marginTop: 10,
-    backgroundColor: colors.primary,
     paddingVertical: 15,
     borderRadius: 26,
     alignItems: "center",
@@ -246,11 +428,11 @@ const s = StyleSheet.create({
     fontSize: 16,
   },
 
-  note: {
+  note: (c: any) => ({
     marginTop: 10,
     textAlign: "center",
-    color: colors.textMuted,
+    color: c.textMuted,
     fontSize: 13,
     fontFamily: fonts.sans,
-  },
+  }),
 });

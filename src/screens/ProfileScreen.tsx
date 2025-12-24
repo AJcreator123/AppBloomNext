@@ -1,26 +1,57 @@
-// src/screens/ProfileScreen.tsx
-import React, { useEffect, useRef } from "react";
+ import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   Image,
   Animated,
   Easing,
   TouchableOpacity,
+  Modal,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import colors from "../theme/colors";
-import { fonts } from "../theme/typography";
-import { usePlants } from "../context/PlantsContext";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function ProfileScreen({ navigation }: any) {
+import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
+import { usePlants } from "../context/PlantsContext";
+import { useReadingsStore } from "../store/readingsStore";
+
+const PROFILE_IMAGE_KEY = "@profile_image_uri";
+
+export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
 
-  // ⭐ Get plants from context (real–time)
   const { plants } = usePlants();
   const plantCount = plants.length;
+  const pairedCount = plants.filter(p => p.potMacAddress).length;
+
+  const latestReading = useReadingsStore((s) => s.reading);
+
+  const lastUpdateLabel = latestReading?.created_at
+    ? new Date(latestReading.created_at).toLocaleTimeString()
+    : "No data yet";
+
+  const { mode, setMode } = useThemeMode();
+  const colors = themes[mode];
+
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  /* ================= LOAD PROFILE IMAGE ================= */
+
+  useEffect(() => {
+    const loadImage = async () => {
+      const saved = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
+      if (saved) setProfileImage(saved);
+    };
+    loadImage();
+  }, []);
+
+  /* ================= ANIMATION ================= */
 
   useEffect(() => {
     Animated.parallel([
@@ -39,107 +70,176 @@ export default function ProfileScreen({ navigation }: any) {
     ]).start();
   }, []);
 
+  /* ================= IMAGE PICKER ================= */
+
+  const changeProfilePhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permission required",
+        "Please allow photo access to change your profile picture."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setProfileImage(uri);
+      await AsyncStorage.setItem(PROFILE_IMAGE_KEY, uri);
+    }
+  };
+
   return (
-    <Animated.View
-      style={[
-        s.container,
-        { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
-      ]}
-    >
-      {/* Avatar */}
-      <Image
-        source={{ uri: "https://i.pravatar.cc/200?img=14" }}
-        style={s.avatar}
-      />
-
-      {/* Name */}
-      <Text style={s.name}>Ayaan Jamal</Text>
-      <Text style={s.sub}>Plant caretaker • Growth mindset 🌱</Text>
-
-      {/* Stats */}
-      <View style={s.statsRow}>
-        <View style={s.statCard}>
-          <Ionicons name="leaf-outline" size={22} color={colors.accent} />
-          <Text style={s.statLabel}>Plants</Text>
-          <Text style={s.statValue}>{plantCount}</Text>
-        </View>
-
-        <View style={s.statCard}>
-          <Ionicons name="water-outline" size={22} color={colors.accent} />
-          <Text style={s.statLabel}>Watered</Text>
-          <Text style={s.statValue}>12</Text>
-        </View>
-
-        <View style={s.statCard}>
-          <Ionicons name="time-outline" size={22} color={colors.accent} />
-          <Text style={s.statLabel}>Streak</Text>
-          <Text style={s.statValue}>6 days</Text>
-        </View>
-      </View>
-
-      {/* Settings */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Settings</Text>
-
-        {/* ✅ NEW: Choose Plant */}
-        <TouchableOpacity
-          style={s.option}
-          onPress={() => navigation.navigate("PlantPicker")}
-        >
-          <Ionicons name="leaf-outline" size={20} color={colors.text} />
-          <Text style={s.optionText}>Choose Plant</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.option}>
-          <Ionicons name="brush-outline" size={20} color={colors.text} />
-          <Text style={s.optionText}>Appearance</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.option}>
-          <Ionicons name="notifications-outline" size={20} color={colors.text} />
-          <Text style={s.optionText}>Notifications</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.option}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={20}
-            color={colors.text}
+    <>
+      <Animated.View
+        style={[
+          s.container(colors),
+          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        {/* PROFILE IMAGE */}
+        <TouchableOpacity onPress={changeProfilePhoto}>
+          <Image
+            source={{
+              uri:
+                profileImage ??
+                "https://i.pravatar.cc/200?img=14",
+            }}
+            style={s.avatar(colors)}
           />
-          <Text style={s.optionText}>Privacy</Text>
+          <View style={s.cameraBadge(colors)}>
+            <Ionicons name="camera-outline" size={16} color="white" />
+          </View>
         </TouchableOpacity>
-      </View>
-    </Animated.View>
+
+        {/* NAME */}
+        <Text style={s.name(colors)}>User</Text>
+        <Text style={s.sub(colors)}>
+          Managing plants with Bloom 🌱
+        </Text>
+
+        {/* STATS */}
+        <View style={s.statsRow}>
+          <View style={s.statCard(colors)}>
+            <Ionicons name="leaf-outline" size={22} color={colors.accent} />
+            <Text style={s.statLabel(colors)}>Plants</Text>
+            <Text style={s.statValue(colors)}>{plantCount}</Text>
+          </View>
+
+          <View style={s.statCard(colors)}>
+            <Ionicons name="hardware-chip-outline" size={22} color={colors.accent} />
+            <Text style={s.statLabel(colors)}>Paired Pots</Text>
+            <Text style={s.statValue(colors)}>{pairedCount}</Text>
+          </View>
+
+          <View style={s.statCard(colors)}>
+            <Ionicons name="time-outline" size={22} color={colors.accent} />
+            <Text style={s.statLabel(colors)}>Last Update</Text>
+            <Text style={s.statValue(colors)}>{lastUpdateLabel}</Text>
+          </View>
+        </View>
+
+        {/* SETTINGS */}
+        <View style={s.section(colors)}>
+          <Text style={s.sectionTitle(colors)}>Settings</Text>
+
+          <TouchableOpacity
+            style={s.option}
+            onPress={() => setShowThemePicker(true)}
+          >
+            <Ionicons name="brush-outline" size={20} color={colors.text} />
+            <Text style={s.optionText(colors)}>Appearance</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      {/* THEME PICKER */}
+      <Modal transparent animationType="fade" visible={showThemePicker}>
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowThemePicker(false)}
+        >
+          <View style={s.modalCard(colors)}>
+            <Text style={s.modalTitle(colors)}>Appearance</Text>
+
+            {(["light", "dark"] as const).map((m) => (
+              <TouchableOpacity
+                key={m}
+                style={s.themeOption}
+                onPress={() => {
+                  setMode(m);
+                  setShowThemePicker(false);
+                }}
+              >
+                <Ionicons
+                  name={m === "light" ? "sunny-outline" : "moon-outline"}
+                  size={20}
+                  color={colors.text}
+                />
+                <Text style={s.optionText(colors)}>
+                  {m === "light" ? "Light Mode" : "Dark Mode"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
-const s = StyleSheet.create({
-  container: {
+/* ================= STYLES ================= */
+
+const s = {
+  container: (c: any) => ({
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: c.bg,
     paddingTop: 60,
     alignItems: "center",
     paddingHorizontal: 22,
-  },
-  avatar: {
+  }),
+
+  avatar: (c: any) => ({
     width: 110,
     height: 110,
     borderRadius: 60,
-    marginBottom: 14,
     borderWidth: 3,
-    borderColor: colors.border,
-  },
-  name: {
+    borderColor: c.border,
+  }),
+
+  cameraBadge: (c: any) => ({
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: c.primary,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  }),
+
+  name: (c: any) => ({
     fontFamily: fonts.display,
     fontSize: 28,
-    color: colors.text,
-  },
-  sub: {
+    color: c.text,
+    marginTop: 14,
+  }),
+
+  sub: (c: any) => ({
     fontFamily: fonts.sans,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: 4,
     marginBottom: 26,
-  },
+  }),
 
   statsRow: {
     flexDirection: "row",
@@ -147,52 +247,86 @@ const s = StyleSheet.create({
     width: "100%",
     marginBottom: 26,
   },
-  statCard: {
+
+  statCard: (c: any) => ({
     flex: 1,
     marginHorizontal: 6,
-    backgroundColor: colors.glass,
-    borderColor: colors.border,
+    backgroundColor: c.glass,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
-  },
-  statLabel: {
+  }),
+
+  statLabel: (c: any) => ({
     fontFamily: fonts.sans,
-    color: colors.textMuted,
+    color: c.textMuted,
     fontSize: 13,
     marginTop: 6,
-  },
-  statValue: {
-    fontFamily: fonts.sansBold,
-    color: colors.text,
-    fontSize: 17,
-    marginTop: 2,
-  },
+    textAlign: "center",
+  }),
 
-  section: {
+  statValue: (c: any) => ({
+    fontFamily: fonts.sansBold,
+    color: c.text,
+    fontSize: 15,
+    marginTop: 4,
+  }),
+
+  section: (c: any) => ({
     width: "100%",
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.line,
-  },
-  sectionTitle: {
+    borderColor: c.line,
+  }),
+
+  sectionTitle: (c: any) => ({
     fontFamily: fonts.sansSemi,
     fontSize: 16,
-    color: colors.text,
+    color: c.text,
     marginBottom: 12,
-  },
+  }),
+
   option: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
   },
-  optionText: {
+
+  optionText: (c: any) => ({
     fontFamily: fonts.sans,
-    color: colors.text,
+    color: c.text,
     fontSize: 15,
     marginLeft: 10,
+  }),
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-});
+
+  modalCard: (c: any) => ({
+    width: "80%",
+    backgroundColor: c.card,
+    borderRadius: 18,
+    padding: 18,
+  }),
+
+  modalTitle: (c: any) => ({
+    fontFamily: fonts.sansSemi,
+    fontSize: 18,
+    color: c.text,
+    marginBottom: 12,
+  }),
+
+  themeOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+};

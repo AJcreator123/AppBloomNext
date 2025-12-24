@@ -1,4 +1,5 @@
 // src/components/StatusCard.tsx
+
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +11,11 @@ interface StatusCardProps {
   value: string;
   unit?: string;
   status?: StatusType;
+
+  // ✅ SUPPORT BOTH (icon is what PlantDetailScreen uses)
+  icon?: keyof typeof Ionicons.glyphMap;
   iconName?: keyof typeof Ionicons.glyphMap;
+
   helperText?: string;
 }
 
@@ -26,10 +31,15 @@ const StatusCard: React.FC<StatusCardProps> = ({
   value,
   unit,
   status = "info",
-  iconName = "leaf-outline",
+  icon,
+  iconName,
   helperText,
 }) => {
   const colors = statusColors[status];
+
+  // ✅ RESOLVE ICON CORRECTLY
+  const resolvedIcon: keyof typeof Ionicons.glyphMap =
+    icon ?? iconName ?? "leaf-outline";
 
   return (
     <View style={styles.card}>
@@ -37,7 +47,11 @@ const StatusCard: React.FC<StatusCardProps> = ({
       <View style={styles.row}>
         <View style={styles.labelRow}>
           <View style={styles.iconBadge}>
-            <Ionicons name={iconName} size={18} color="#22C55E" />
+            <Ionicons
+              name={resolvedIcon}
+              size={18}
+              color="#22C55E"
+            />
           </View>
           <Text style={styles.label}>{label}</Text>
         </View>
@@ -62,7 +76,7 @@ const StatusCard: React.FC<StatusCardProps> = ({
         </View>
       </View>
 
-      {/* ⭐ NEW: TEXT UNDER PILL SAYING WHAT THE SENSOR IS */}
+      {/* SENSOR LABEL */}
       <Text style={styles.sensorLabel}>{label}</Text>
 
       {/* VALUE */}
@@ -140,7 +154,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ⭐ EXACTLY WHAT YOU ASKED FOR
   sensorLabel: {
     marginTop: 6,
     fontSize: 12,

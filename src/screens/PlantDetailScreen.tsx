@@ -9,8 +9,9 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
 
 import StatusCard from "../components/StatusCard";
 import { usePlants } from "../context/PlantsContext";
@@ -26,7 +27,35 @@ import {
   PlantProfile,
 } from "../engine/plantProfiles";
 
+/* ================= ICON STYLES PER VITAL ================= */
+
+const VITAL_ICON = {
+  moisture: {
+    icon: "water-outline",
+    bg: "#2563EB22",
+    color: "#2563EB",
+  },
+  light: {
+    icon: "sunny-outline",
+    bg: "#F59E0B22",
+    color: "#F59E0B",
+  },
+  temp: {
+    icon: "thermometer-outline",
+    bg: "#EF444422",
+    color: "#EF4444",
+  },
+  humidity: {
+    icon: "cloud-outline",
+    bg: "#06B6D422",
+    color: "#06B6D4",
+  },
+};
+
 export default function PlantDetailScreen({ route, navigation }: any) {
+  const { mode } = useThemeMode();
+  const colors = themes[mode];
+
   const { plants } = usePlants();
 
   const routePlant = route?.params?.plant;
@@ -35,17 +64,23 @@ export default function PlantDetailScreen({ route, navigation }: any) {
   let plant = routePlant ?? null;
 
   if (!plant && routePlantId != null) {
-    const id = String(routePlantId);
-    plant = plants.find((p) => String(p.id) === id) ?? null;
+    plant =
+      plants.find((p) => String(p.id) === String(routePlantId)) ?? null;
   }
 
   if (!plant) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>No plant found</Text>
+      <View style={[styles.errorContainer, { backgroundColor: colors.bg }]}>
+        <Text style={[styles.errorTitle, { color: colors.text }]}>
+          No plant found
+        </Text>
+
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.errorButton}
+          style={[
+            styles.errorButton,
+            { backgroundColor: colors.primary + "CC" },
+          ]}
         >
           <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -86,25 +121,39 @@ export default function PlantDetailScreen({ route, navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-
       {/* HEADER */}
       <ImageBackground
         source={{ uri: plant.image }}
         style={styles.header}
-        imageStyle={{ opacity: 0.85 }}
+        imageStyle={{ opacity: 0.9 }}
       >
         <View style={styles.headerOverlay} />
 
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.back}
+          style={[
+            styles.back,
+            { backgroundColor: "rgba(0,0,0,0.45)" },
+          ]}
         >
           <Ionicons name="chevron-back" size={30} color="white" />
         </TouchableOpacity>
 
-        <View style={styles.titleBox}>
-          <Text style={styles.titleText}>{plant.name}</Text>
-          <Text style={styles.subText}>{plant.species}</Text>
+        <View
+          style={[
+            styles.titleBox,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.line,
+            },
+          ]}
+        >
+          <Text style={[styles.titleText, { color: colors.text }]}>
+            {plant.name}
+          </Text>
+          <Text style={[styles.subText, { color: colors.textMuted }]}>
+            {plant.species}
+          </Text>
         </View>
       </ImageBackground>
 
@@ -114,28 +163,37 @@ export default function PlantDetailScreen({ route, navigation }: any) {
           paddingHorizontal: 14,
         }}
       >
-
-        <Text style={styles.vitalsHeader}>Plant Vitals</Text>
+        <Text style={[styles.vitalsHeader, { color: colors.text }]}>
+          Plant Vitals
+        </Text>
 
         {/* Moisture + Light */}
         <View style={styles.metricsRow}>
           <View style={styles.vitalWrapper}>
-            <Text style={styles.vitalTitle}>Moisture</Text>
+            <Text style={[styles.vitalTitle, { color: colors.text }]}>
+              Moisture
+            </Text>
             <StatusCard
               value={v.moisture}
               unit="%"
-              icon="water-outline"
+              icon={VITAL_ICON.moisture.icon}
+              iconColor={VITAL_ICON.moisture.color}
+              iconBg={VITAL_ICON.moisture.bg}
               title=""
               tone={v.moisture < 40 ? "warn" : "ok"}
             />
           </View>
 
           <View style={styles.vitalWrapper}>
-            <Text style={styles.vitalTitle}>Light</Text>
+            <Text style={[styles.vitalTitle, { color: colors.text }]}>
+              Light
+            </Text>
             <StatusCard
               value={v.light}
               unit="lux"
-              icon="sunny-outline"
+              icon={VITAL_ICON.light.icon}
+              iconColor={VITAL_ICON.light.color}
+              iconBg={VITAL_ICON.light.bg}
               title=""
             />
           </View>
@@ -144,50 +202,77 @@ export default function PlantDetailScreen({ route, navigation }: any) {
         {/* Temp + Humidity */}
         <View style={[styles.metricsRow, { marginTop: 16 }]}>
           <View style={styles.vitalWrapper}>
-            <Text style={styles.vitalTitle}>Temperature</Text>
+            <Text style={[styles.vitalTitle, { color: colors.text }]}>
+              Temperature
+            </Text>
             <StatusCard
               value={v.temp}
               unit="°C"
-              icon="thermometer-outline"
+              icon={VITAL_ICON.temp.icon}
+              iconColor={VITAL_ICON.temp.color}
+              iconBg={VITAL_ICON.temp.bg}
               title=""
             />
           </View>
 
           <View style={styles.vitalWrapper}>
-            <Text style={styles.vitalTitle}>Humidity</Text>
+            <Text style={[styles.vitalTitle, { color: colors.text }]}>
+              Humidity
+            </Text>
             <StatusCard
               value={v.humidity}
               unit="%"
-              icon="cloud-outline"
+              icon={VITAL_ICON.humidity.icon}
+              iconColor={VITAL_ICON.humidity.color}
+              iconBg={VITAL_ICON.humidity.bg}
               title=""
             />
           </View>
         </View>
 
         {/* Recommendation */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Care Recommendation</Text>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.line,
+            },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
+            Care Recommendation
+          </Text>
 
           {advice ? (
             <>
-              <Text style={styles.cardText}>
+              <Text style={[styles.cardText, { color: colors.textMuted }]}>
                 <Text style={{ fontFamily: fonts.sansSemi }}>Overall: </Text>
                 {advice.overall}
               </Text>
 
-              <Text style={styles.row}>• Water: {advice.water}</Text>
-              <Text style={styles.row}>• Light: {advice.light}</Text>
-              <Text style={styles.row}>
+              <Text style={[styles.row, { color: colors.textMuted }]}>
+                • Water: {advice.water}
+              </Text>
+              <Text style={[styles.row, { color: colors.textMuted }]}>
+                • Light: {advice.light}
+              </Text>
+              <Text style={[styles.row, { color: colors.textMuted }]}>
                 • Temperature: {advice.temperature}
               </Text>
             </>
           ) : (
-            <Text style={styles.cardText}>No care profile found.</Text>
+            <Text style={[styles.cardText, { color: colors.textMuted }]}>
+              No care profile found.
+            </Text>
           )}
         </View>
 
         <TouchableOpacity
-          style={styles.historyButton}
+          style={[
+            styles.historyButton,
+            { backgroundColor: colors.primary + "CC" },
+          ]}
           onPress={() =>
             navigation.navigate("History", {
               plantId: String(plant.id),
@@ -197,14 +282,14 @@ export default function PlantDetailScreen({ route, navigation }: any) {
         >
           <Text style={styles.historyText}>View Full History</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+/* ================= STYLES ================= */
 
+const styles = StyleSheet.create({
   header: {
     height: 300,
     justifyContent: "flex-end",
@@ -213,48 +298,40 @@ const styles = StyleSheet.create({
 
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.28)",
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
 
   back: {
     position: "absolute",
     top: 52,
     left: 16,
-    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 100,
     padding: 8,
     zIndex: 50,
   },
 
   titleBox: {
-    backgroundColor: "white",
     width: "85%",
     borderRadius: 18,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 26,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
+    borderWidth: 1,
   },
 
   titleText: {
     fontFamily: fonts.display,
-    color: colors.text,
     fontSize: 28,
   },
 
   subText: {
     fontFamily: fonts.sans,
-    color: colors.textMuted,
     marginTop: 4,
     fontSize: 14,
   },
 
   vitalsHeader: {
     fontFamily: fonts.sansSemi,
-    color: colors.text,
     fontSize: 18,
     marginTop: 28,
     marginBottom: 10,
@@ -272,44 +349,38 @@ const styles = StyleSheet.create({
   vitalTitle: {
     fontFamily: fonts.sansSemi,
     fontSize: 14,
-    color: colors.text,
     marginBottom: 6,
     marginLeft: 4,
   },
 
   card: {
     marginTop: 28,
-    backgroundColor: colors.card,
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.line,
   },
 
   cardTitle: {
     fontFamily: fonts.sansSemi,
-    color: colors.text,
     fontSize: 18,
     marginBottom: 8,
   },
 
   cardText: {
     fontFamily: fonts.sans,
-    color: colors.textMuted,
     marginTop: 4,
     lineHeight: 22,
   },
 
   row: {
     fontFamily: fonts.sans,
-    color: colors.textMuted,
     marginTop: 8,
-    lineHeight: 22 },
-    
+    lineHeight: 22,
+  },
+
   historyButton: {
     marginTop: 28,
     alignSelf: "center",
-    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 26,
     borderRadius: 20,
@@ -325,12 +396,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.bg,
   },
 
   errorTitle: {
     fontSize: 26,
-    color: colors.text,
     fontFamily: fonts.display,
   },
 
@@ -338,7 +407,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingHorizontal: 22,
     paddingVertical: 10,
-    backgroundColor: colors.primary,
     borderRadius: 100,
   },
 

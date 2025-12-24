@@ -10,15 +10,16 @@ import {
 import { LineChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
 
-import colors from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { themes } from "../theme/colors";
+import { useThemeMode } from "../context/ThemeContext";
 import { usePlants } from "../context/PlantsContext";
 
 const SCREEN_WIDTH = Dimensions.get("window").width - 32;
 
 function generateFakeData(days: number, min: number, max: number) {
-  const labels = [];
-  const data = [];
+  const labels: string[] = [];
+  const data: number[] = [];
   const step = Math.max(1, Math.floor(days / 7));
 
   for (let i = 0; i < days; i++) {
@@ -31,6 +32,9 @@ function generateFakeData(days: number, min: number, max: number) {
 }
 
 export default function HistoryScreen({ route, navigation }: any) {
+  const { mode } = useThemeMode();
+  const colors = themes[mode];
+
   const { plantId } = route.params;
   const { plants } = usePlants();
   const plant = plants.find((p) => p.id === plantId);
@@ -40,7 +44,9 @@ export default function HistoryScreen({ route, navigation }: any) {
   if (!plant) {
     return (
       <View style={s.center}>
-        <Text style={s.error}>Plant not found</Text>
+        <Text style={[s.error, { color: colors.text }]}>
+          Plant not found
+        </Text>
       </View>
     );
   }
@@ -58,78 +64,138 @@ export default function HistoryScreen({ route, navigation }: any) {
     backgroundGradientFrom: colors.card,
     backgroundGradientTo: colors.card,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 200, 120, ${opacity})`,
+    color: (opacity = 1) =>
+      `rgba(76, 175, 80, ${opacity})`,
     labelColor: () => colors.textMuted,
-    propsForDots: { r: "3", strokeWidth: "2", stroke: colors.primary },
+    propsForDots: {
+      r: "3",
+      strokeWidth: "2",
+      stroke: colors.primary,
+    },
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={[s.root, { backgroundColor: colors.bg }]}>
+      {/* BACK BUTTON */}
       <TouchableOpacity
         onPress={() => navigation.goBack()}
-        style={s.backBtn}
+        style={[
+          s.backBtn,
+          { backgroundColor: colors.card },
+        ]}
       >
-        <Ionicons name="chevron-back" size={30} color={colors.text} />
+        <Ionicons
+          name="chevron-back"
+          size={28}
+          color={colors.text}
+        />
       </TouchableOpacity>
 
       <ScrollView
         style={s.container}
         contentContainerStyle={{
-          paddingTop: 90,
+          paddingTop: 96,
           paddingBottom: 40,
         }}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={s.title}>{plant.name} — History</Text>
+        <Text style={[s.title, { color: colors.text }]}>
+          {plant.name} — History
+        </Text>
 
+        {/* RANGE SELECTOR */}
         <View style={s.rangeRow}>
-          {["week", "month", "year"].map((r) => (
-            <TouchableOpacity
-              key={r}
-              onPress={() => setRange(r as any)}
-              style={[s.rangeBtn, range === r && s.rangeBtnActive]}
-            >
-              <Text
+          {["week", "month", "year"].map((r) => {
+            const active = range === r;
+            return (
+              <TouchableOpacity
+                key={r}
+                onPress={() => setRange(r as any)}
                 style={[
-                  s.rangeText,
-                  range === r && { color: "white", fontFamily: fonts.sansSemi },
+                  s.rangeBtn,
+                  {
+                    backgroundColor: active
+                      ? colors.primary + "CC"
+                      : colors.card,
+                    borderColor: colors.line,
+                  },
                 ]}
               >
-                {r === "week" ? "7 Days" : r === "month" ? "30 Days" : "1 Year"}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    s.rangeText,
+                    {
+                      color: active
+                        ? "#fff"
+                        : colors.textMuted,
+                      fontFamily: active
+                        ? fonts.sansSemi
+                        : fonts.sans,
+                    },
+                  ]}
+                >
+                  {r === "week"
+                    ? "7 Days"
+                    : r === "month"
+                    ? "30 Days"
+                    : "1 Year"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <Text style={s.graphTitle}>Moisture (%)</Text>
+        {/* GRAPHS */}
+        <Text style={[s.graphTitle, { color: colors.text }]}>
+          Moisture (%)
+        </Text>
         <LineChart
-          data={{ labels: moisture.labels, datasets: [{ data: moisture.data }] }}
+          data={{
+            labels: moisture.labels,
+            datasets: [{ data: moisture.data }],
+          }}
           width={SCREEN_WIDTH}
           height={220}
           chartConfig={chartConfig}
           style={s.chart}
         />
 
-        <Text style={s.graphTitle}>Temperature (°C)</Text>
+        <Text style={[s.graphTitle, { color: colors.text }]}>
+          Temperature (°C)
+        </Text>
         <LineChart
-          data={{ labels: temperature.labels, datasets: [{ data: temperature.data }] }}
+          data={{
+            labels: temperature.labels,
+            datasets: [{ data: temperature.data }],
+          }}
           width={SCREEN_WIDTH}
           height={220}
           chartConfig={chartConfig}
           style={s.chart}
         />
 
-        <Text style={s.graphTitle}>Humidity (%)</Text>
+        <Text style={[s.graphTitle, { color: colors.text }]}>
+          Humidity (%)
+        </Text>
         <LineChart
-          data={{ labels: humidity.labels, datasets: [{ data: humidity.data }] }}
+          data={{
+            labels: humidity.labels,
+            datasets: [{ data: humidity.data }],
+          }}
           width={SCREEN_WIDTH}
           height={220}
           chartConfig={chartConfig}
           style={s.chart}
         />
 
-        <Text style={s.graphTitle}>Light (lux)</Text>
+        <Text style={[s.graphTitle, { color: colors.text }]}>
+          Light (lux)
+        </Text>
         <LineChart
-          data={{ labels: light.labels, datasets: [{ data: light.data }] }}
+          data={{
+            labels: light.labels,
+            datasets: [{ data: light.data }],
+          }}
           width={SCREEN_WIDTH}
           height={220}
           chartConfig={chartConfig}
@@ -142,42 +208,54 @@ export default function HistoryScreen({ route, navigation }: any) {
   );
 }
 
+/* ================= STYLES ================= */
+
 const s = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
     paddingHorizontal: 16,
   },
+
   title: {
     fontFamily: fonts.display,
-    color: colors.text,
     fontSize: 28,
     marginBottom: 16,
   },
+
   graphTitle: {
     fontFamily: fonts.sansSemi,
-    color: colors.text,
     fontSize: 16,
     marginTop: 26,
     marginBottom: 8,
   },
-  chart: { borderRadius: 16 },
+
+  chart: {
+    borderRadius: 16,
+  },
 
   backBtn: {
     position: "absolute",
-    top: 40,
+    top: 44,
     left: 16,
     zIndex: 999,
-    padding: 6,
+    padding: 8,
     borderRadius: 100,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    borderWidth: 1,
   },
 
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   error: {
     fontFamily: fonts.sansSemi,
     fontSize: 18,
-    color: "red",
   },
 
   rangeRow: {
@@ -190,14 +268,10 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.line,
   },
-  rangeBtnActive: { backgroundColor: colors.primary },
+
   rangeText: {
-    fontFamily: fonts.sans,
-    color: colors.textMuted,
     fontSize: 14,
   },
 });
