@@ -20,7 +20,6 @@
     "buffer": "^6.0.3",
     "expo": "~54.0.20",
     "expo-asset": "^12.0.12",
-    "expo-auth-session": "^7.0.10",
     "expo-blur": "~15.0.7",
     "expo-crypto": "^15.0.8",
     "expo-device": "^8.0.10",
