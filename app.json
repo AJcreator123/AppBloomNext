@@ -20,7 +20,15 @@
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
         "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot.",
-        "NSUserNotificationUsageDescription": "Bloom uses notifications to remind you when your plants need watering and care."
+        "NSUserNotificationUsageDescription": "Bloom uses notifications to remind you when your plants need watering and care.",
+
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.1031881587398-1bkcq0vo6bos8076uemdqsger3bsak5k"
+            ]
+          }
+        ]
       }
     },
 
@@ -32,7 +40,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permissiASon.BLUETOOTH",
+        "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
