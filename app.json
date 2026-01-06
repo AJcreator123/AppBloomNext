@@ -17,6 +17,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.AppBloom",
+      "googleServicesFile": "./GoogleService-Info.plist",
+
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
         "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot.",
