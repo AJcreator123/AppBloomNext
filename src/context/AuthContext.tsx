@@ -61,10 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-
+      // Note: hasPlayServices is Android-only, skip on iOS
       const info = await GoogleSignin.signIn();
 
       // ✅ DEFENSIVE FIX — SUPPORT BOTH SHAPES
