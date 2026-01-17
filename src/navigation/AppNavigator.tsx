@@ -16,6 +16,7 @@ import AddPlantScreen from "../screens/AddPlantScreen";
 import PairBloomPotScreen from "../screens/PairBloomPotScreen";
 import PlantPickerScreen from "../screens/PlantPickerScreen";
 import AuthGate from "../screens/AuthGate";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -112,6 +113,12 @@ export default function AppNavigator() {
               component={PairBloomPotScreen}
             />
             <Stack.Screen name="PlantPicker" component={PlantPickerScreen} />
+
+            {/* Legal */}
+            <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicyScreen}
+            />
           </>
         )}
       </Stack.Navigator>
