@@ -19,11 +19,10 @@
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Bloom uses your photo library so you can choose a profile picture and personalize your account.",
+        "NSPhotoLibraryUsageDescription": "Bloom allows you to choose a photo to set as your profile picture so you can personalize your account.",
         "NSCameraUsageDescription": "Bloom uses the camera so you can take a profile picture and document your plants.",
         "NSUserNotificationUsageDescription": "Bloom uses notifications to remind you when your plants need watering and care.",
-        "NSBluetoothAlwaysUsageDescription": "Bloom uses Bluetooth to connect to your Bloom Pot and read plant sensor data.",
-        "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to communicate with your Bloom Pot device.",
+        "NSBluetoothUsageDescription": "Bloom uses Bluetooth to connect to your Bloom Pot to read sensor data and manage plant care.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
