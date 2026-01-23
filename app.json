@@ -16,17 +16,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.AppBloom",
+      "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "Bloom needs Bluetooth to connect to your plant pot.",
-        "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to send data to your plant pot.",
+        "NSPhotoLibraryUsageDescription": "Bloom uses your photo library so you can choose a profile picture and personalize your account.",
+        "NSCameraUsageDescription": "Bloom uses the camera so you can take a profile picture and document your plants.",
         "NSUserNotificationUsageDescription": "Bloom uses notifications to remind you when your plants need watering and care.",
+        "NSBluetoothAlwaysUsageDescription": "Bloom uses Bluetooth to connect to your Bloom Pot and read plant sensor data.",
+        "NSBluetoothPeripheralUsageDescription": "Bloom uses Bluetooth to communicate with your Bloom Pot device.",
         "CFBundleURLTypes": [
-          {
-            "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.1031881587398-1bkcq0vo6bos8076uemdqsger3bsak5k"
-            ]
-          },
           {
             "CFBundleURLSchemes": [
               "com.googleusercontent.apps.1031881587398-1bkcq0vo6bos8076uemdqsger3bsak5k"
@@ -54,17 +52,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "react-native-ble-plx",
-        {
-          "isBackgroundEnabled": true,
-          "modes": [
-            "peripheral",
-            "central"
-          ],
-          "bluetoothAlwaysPermission": "Bloom needs Bluetooth to connect to your plant pot."
-        }
-      ]
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

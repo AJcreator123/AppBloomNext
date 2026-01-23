@@ -13,7 +13,7 @@ import { fonts } from "../theme/typography";
 import { useThemeMode } from "../context/ThemeContext";
 
 export default function AuthGate() {
-  const { signInWithGoogle, loading } = useAuth();
+  const { signInWithGoogle, signInWithApple, loading } = useAuth();
   const { mode } = useThemeMode();
   const colors = themes[mode];
 
@@ -35,6 +35,16 @@ export default function AuthGate() {
         Sign in to manage your plants and Bloom Pots.
       </Text>
 
+      {/* 🍎 SIGN IN WITH APPLE (REQUIRED BY APPLE) */}
+      <TouchableOpacity
+        style={[s.appleBtn]}
+        onPress={signInWithApple}
+      >
+        <Ionicons name="logo-apple" size={22} color="white" />
+        <Text style={s.appleText}>Continue with Apple</Text>
+      </TouchableOpacity>
+
+      {/* GOOGLE */}
       <TouchableOpacity
         style={[s.googleBtn, { backgroundColor: colors.primary }]}
         onPress={signInWithGoogle}
@@ -69,6 +79,25 @@ const s = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
   },
+
+  /* APPLE */
+  appleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 26,
+    backgroundColor: "#000",
+    marginBottom: 14,
+  },
+  appleText: {
+    color: "white",
+    fontFamily: fonts.sansSemi,
+    fontSize: 16,
+    marginLeft: 10,
+  },
+
+  /* GOOGLE */
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
