@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "BloomBear",
+    "name": "BloomBetter",
     "slug": "AppBloom",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -51,7 +51,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "extra": {
       "eas": {

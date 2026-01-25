@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase } from "../lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -126,47 +127,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async () => {
     try {
-      const { data } = await supabase.auth.signInWithOAuth({
-        provider: "apple",
-        options: {
-          redirectTo: redirectUri,
-          skipBrowserRedirect: true,
-        },
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
       });
 
-      if (!data?.url) {
-        console.error("No OAuth URL returned");
+      if (!credential.identityToken) {
+        console.error("No identity token returned from Apple");
         return;
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        redirectUri
-      );
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: credential.identityToken,
+      });
 
-      if (result.type === "success" && result.url) {
-        const url = result.url;
-
-        const params = new URLSearchParams(url.split("#")[1]);
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
-
-        if (!access_token || !refresh_token) {
-          console.error("No tokens found in redirect URL");
-          return;
-        }
-
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-
-        if (error) {
-          console.error("Apple set session error:", error);
-        }
+      if (error) {
+        console.error("Apple sign in error:", error);
       }
-    } catch (err) {
-      console.error("Apple OAuth error:", err);
+    } catch (err: any) {
+      if (err.code === "ERR_REQUEST_CANCELED") {
+        // User canceled the sign-in flow
+        console.log("Apple sign in canceled");
+      } else {
+        console.error("Apple OAuth error:", err);
+      }
     }
   };
 
