@@ -58,6 +58,8 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
 
     stopScanFn = await scanForPots((device) => {
       const name = device.name || device.localName || "";
+      console.log("these are the devices")
+      console.log(name) 
       if (!name.startsWith("BloomPot-")) return;
 
       setPots((prev) => {
@@ -218,7 +220,7 @@ export default function PairBloomPotScreen({ navigation, route }: any) {
               >
                 <Ionicons name="radio-outline" size={20} color="white" />
                 <Text style={s.scanBtnText}>
-                  {isScanning ? "Scanning…" : "Scan for devices"}
+                  {isScanning ? "Scanning…" : "Scan for devices :)"}
                 </Text>
               </TouchableOpacity>
 

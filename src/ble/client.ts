@@ -32,6 +32,43 @@ export async function requestPermissions() {
 export async function scanForPots(onDeviceFound: (d: Device) => void) {
   await requestPermissions();
 
+  // Wait for Bluetooth to be powered on
+  const state = await manager.state();
+  console.log("📡 Bluetooth state:", state);
+
+  if (state !== "PoweredOn") {
+    console.log("⚠️ Bluetooth not ready, waiting...");
+    
+    // Wait up to 10 seconds for Bluetooth to become ready
+    const timeout = new Promise<void>((_, reject) => 
+      setTimeout(() => reject(new Error("Bluetooth did not become ready in time")), 10000)
+    );
+    
+    const waitForBluetooth = new Promise<void>((resolve, reject) => {
+      const subscription = manager.onStateChange((newState) => {
+        console.log("📡 Bluetooth state changed to:", newState);
+        
+        if (newState === "PoweredOn") {
+          subscription.remove();
+          resolve();
+        } else if (newState === "Unauthorized") {
+          subscription.remove();
+          reject(new Error("Bluetooth permission denied. Please enable Bluetooth in Settings."));
+        } else if (newState === "PoweredOff") {
+          subscription.remove();
+          reject(new Error("Bluetooth is turned off. Please turn on Bluetooth in Settings."));
+        }
+      }, true);
+    });
+
+    try {
+      await Promise.race([waitForBluetooth, timeout]);
+    } catch (error: any) {
+      console.error("❌ Bluetooth error:", error.message);
+      throw error;
+    }
+  }
+
   console.log("🔍 Starting BLE scan…");
 
   manager.startDeviceScan(null, { scanMode: 2 }, (error, device) => {

@@ -93,9 +93,9 @@ void startBLE() {
     return;
   }
   
-  Serial.println("Starting BLE setup...");
+  Serial.println("Starting BLE setup v2...");
 
-  String devName = "BloomPot-" +
+  String devName = "Pot-" +
                    String((uint32_t)ESP.getEfuseMac(), HEX).substring(6);
 
   NimBLEDevice::init(devName.c_str());
